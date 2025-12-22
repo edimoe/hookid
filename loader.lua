@@ -7,14 +7,10 @@ local RunService = game:GetService("RunService")
 
 local MODULE_BASE_URL = "https://raw.githubusercontent.com/edimoe/hookid/refs/heads/main/"
 
--- Module loading order (core must be loaded first - split into parts to prevent freeze)
+-- Module loading order (core must be loaded first)
 local MODULE_LOAD_ORDER = {
-    -- Core systems (must load first - split into parts)
-    { name = "core_init", path = "modules/core/core_init.lua", required = true },
-    { name = "core_managers", path = "modules/core/core_managers.lua", required = true },
-    { name = "core_config", path = "modules/core/core_config.lua", required = true },
-    { name = "core_systems", path = "modules/core/core_systems.lua", required = true },
-    { name = "core_helpers", path = "modules/core/core_helpers.lua", required = true },
+    -- Core systems (must load first)
+    { name = "core", path = "modules/core/core.lua", required = true },
     
     -- Tab modules (load after core)
     { name = "farm", path = "modules/tabs/farm.lua", required = true },
@@ -62,14 +58,11 @@ local function LoadModule(moduleInfo)
         local func = loadstring(content)
         if func then
             -- Yield before executing module
-            if string.find(moduleInfo.name, "core_") == 1 then
-                -- Core parts: extra yield, especially for core_init (WindUI loading)
-                if moduleInfo.name == "core_init" then
-                    SmartYield(20)
-                    print("[Loader] Loading WindUI (this may cause a brief freeze - normal)...")
-                else
-                    SmartYield(15)
-                end
+            if moduleInfo.name == "core" then
+                SmartYield(30)  -- Extra yield for core module
+                print("[Loader] ⚠ WARNING: Loading core module now...")
+                print("[Loader] This will cause a brief freeze (2-5 seconds) - this is NORMAL!")
+                print("[Loader] Core module loads WindUI and all core systems...")
             else
                 SmartYield(10)
             end
@@ -141,13 +134,12 @@ task.spawn(function()
             failedCount = failedCount + 1
         end
         
-        -- Delay after core parts to allow game to recover
-        if i <= 5 then
-            -- Core parts: shorter delay between each part
-            SmartYield(60)  -- ~1 second between core parts
-        elseif i == 6 then
-            -- After all core parts loaded: longer delay
-            SmartYield(180)  -- ~3 seconds after all core parts
+        -- Delay after essential modules to allow game to recover
+        if i == 1 then
+            -- After core module: MUCH longer delay (core loads WindUI which is heavy)
+            print("[Loader] Core module loaded. Waiting 10 seconds for game to stabilize...")
+            SmartYield(600)  -- ~10 seconds (allows WindUI and all systems to fully initialize)
+            print("[Loader] ✓ Game stabilized, continuing...")
         else
             -- After farm module
             SmartYield(120)  -- ~2 seconds after farm
