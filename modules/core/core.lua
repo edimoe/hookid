@@ -1605,4 +1605,34 @@ FishingAreas = {
         table.insert(AreaNames, name)
     end
 
+-- =================================================================
+-- EVENT GUI HELPER
+-- =================================================================
+function GetEventGUI()
+    local success, gui = pcall(function()
+        local menuRings = workspace:WaitForChild("!!! MENU RINGS", 5)
+        local eventTracker = menuRings:WaitForChild("Event Tracker", 5)
+        local contentItems = eventTracker.Main.Gui.Content.Items
+
+        local countdown = contentItems.Countdown:WaitForChild("Label")	
+        local statsContainer = contentItems:WaitForChild("Stats")	
+        local timer = statsContainer.Timer:WaitForChild("Label")	
+        
+        local quantity = statsContainer:WaitForChild("Quantity")	
+        local odds = statsContainer:WaitForChild("Odds")
+
+        return {
+            Countdown = countdown,
+            Timer = timer,
+            Quantity = quantity,
+            Odds = odds,
+        }
+    end)
+    
+    if success and gui then
+        return gui
+    else
+        return nil
+    end
+end
 
