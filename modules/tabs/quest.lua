@@ -20,16 +20,7 @@ do
     local QUEST_AUTO_EQUIP_THREAD = nil 
 
     -- Controller & Remotes
-    local RPath = {"Packages", "_Index", "sleitnick_net@0.2.0", "net"}
-    
-    local function GetRemote(remotePath, name, timeout)
-        local currentInstance = game:GetService("ReplicatedStorage")
-        for _, childName in ipairs(remotePath) do
-            currentInstance = currentInstance:WaitForChild(childName, timeout or 0.5)
-            if not currentInstance then return nil end
-        end
-        return currentInstance:FindFirstChild(name)
-    end
+    -- Using GetRemote from core module (global)
 
     local RE_EquipToolFromHotbar = GetRemote(RPath, "RE/EquipToolFromHotbar")
     local RF_ChargeFishingRod = GetRemote(RPath, "RF/ChargeFishingRod")
