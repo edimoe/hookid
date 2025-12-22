@@ -58,13 +58,20 @@ local function LoadModule(moduleInfo)
         local func = loadstring(content)
         if func then
             -- Yield before executing module (more aggressive for large modules)
-            SmartYield(10)
+            if moduleInfo.name == "core" then
+                SmartYield(30)  -- Extra yield for core module
+                print("[Loader] Loading core module (this is the largest module, please wait)...")
+            else
+                SmartYield(10)
+            end
             
             -- Execute module with setfenv
             local env = getfenv(0)
             setfenv(func, env)
             
-            -- Execute module (unfortunately can't chunk this, but yield points help)
+            -- Execute module
+            -- Note: This is still blocking, but the delays before/after help reduce freeze impact
+            print(string.format("[Loader] Executing module: %s...", moduleInfo.name))
             func()
             print(string.format("[Loader] ✓ Loaded module: %s", moduleInfo.name))
             
@@ -125,8 +132,24 @@ task.spawn(function()
             failedCount = failedCount + 1
         end
         
-        -- Longer delay after essential modules to allow game to recover
-        SmartYield(240)  -- ~4 seconds (critical for preventing freeze after core)
+        -- MUCH longer delay after essential modules to allow game to recover
+        -- Core module is very large (1639 lines) and loads WindUI which is heavy
+        if i == 1 then
+            print("[Loader] ⚠ Core module loaded. Waiting 15 seconds for game to stabilize...")
+            print("[Loader] This delay prevents freeze - please wait...")
+            -- Very long delay after core to prevent freeze (core loads WindUI which is heavy)
+            for frame = 1, 900 do  -- ~15 seconds at 60 FPS
+                RunService.Heartbeat:Wait()
+                -- Print progress every 3 seconds
+                if frame % 180 == 0 then
+                    local secondsPassed = math.floor(frame / 60)
+                    print(string.format("[Loader] Still waiting... %d/%d seconds", secondsPassed, 15))
+                end
+            end
+            print("[Loader] ✓ Game stabilized, continuing...")
+        else
+            SmartYield(180)  -- ~3 seconds after farm
+        end
     end
     
     print("[Loader] Essential modules loaded. Loading optional modules in background...")
