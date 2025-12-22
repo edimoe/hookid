@@ -1,9 +1,7 @@
 --[[
     HOOKID | Fish Hub - Modular Loader
-    Loads modules one by one with smart yielding to prevent freezing
+    Loads modules one by one to reduce initial load time
 ]]
-
-local RunService = game:GetService("RunService")
 
 local MODULE_BASE_URL = "https://raw.githubusercontent.com/edimoe/hookid/refs/heads/main/"
 
@@ -26,60 +24,15 @@ local MODULE_LOAD_ORDER = {
     { name = "about", path = "modules/tabs/about.lua", required = false },
 }
 
--- Smart yield function using RunService.Heartbeat for smoother yielding
-local function SmartYield(count)
-    count = count or 1
-    for i = 1, count do
-        RunService.Heartbeat:Wait()
-    end
-end
-
--- Execute function with chunk-based yielding (for large modules)
-local function ExecuteWithYielding(func)
-    -- Try to execute, but if it takes too long, the yield points in the module itself will help
-    local success, err = pcall(func)
-    if not success then
-        error(err)
-    end
-end
-
--- Load module with error handling (with smart yielding)
+-- Load module with error handling
 local function LoadModule(moduleInfo)
     local success, err = pcall(function()
-        -- Yield before HTTP request
-        SmartYield(3)
-        
         local url = MODULE_BASE_URL .. moduleInfo.path
         local content = game:HttpGet(url, true)
-        
-        -- Yield after HTTP request
-        SmartYield(3)
-        
         local func = loadstring(content)
         if func then
-            -- Yield before executing module
-            if moduleInfo.name == "core" then
-                SmartYield(30)  -- Extra yield for core module
-                print("[Loader] ⚠ WARNING: Loading core module now...")
-                print("[Loader] This will cause a brief freeze (2-5 seconds) - this is NORMAL!")
-                print("[Loader] Core module loads WindUI and all core systems...")
-            else
-                SmartYield(10)
-            end
-            
-            -- Execute module with setfenv
-            local env = getfenv(0)
-            setfenv(func, env)
-            
-            -- Execute module
-            -- Note: This is still blocking, but the delays before/after help reduce freeze impact
-            print(string.format("[Loader] Executing module: %s...", moduleInfo.name))
             func()
             print(string.format("[Loader] ✓ Loaded module: %s", moduleInfo.name))
-            
-            -- Yield after executing module
-            SmartYield(5)
-            
             return true
         else
             error("Failed to compile module: " .. moduleInfo.name)
@@ -99,78 +52,30 @@ local function LoadModule(moduleInfo)
     return true
 end
 
--- Main loader (async to prevent freezing)
--- Load essential modules first, then load others in background
-task.spawn(function()
-    print("========================================")
-    print("[HookID] Starting modular loader...")
-    print("========================================")
+-- Main loader
+print("========================================")
+print("[HookID] Starting modular loader...")
+print("========================================")
 
-    local startTime = tick()
-    local loadedCount = 0
-    local failedCount = 0
-    
-    -- Separate essential and optional modules
-    local essentialModules = {}
-    local optionalModules = {}
-    
-    for _, moduleInfo in ipairs(MODULE_LOAD_ORDER) do
-        if moduleInfo.required then
-            table.insert(essentialModules, moduleInfo)
-        else
-            table.insert(optionalModules, moduleInfo)
-        end
+local startTime = tick()
+local loadedCount = 0
+local failedCount = 0
+
+for _, moduleInfo in ipairs(MODULE_LOAD_ORDER) do
+    if LoadModule(moduleInfo) then
+        loadedCount = loadedCount + 1
+    else
+        failedCount = failedCount + 1
     end
     
-    -- Load essential modules first (core, farm)
-    print("[Loader] Loading essential modules...")
-    for i, moduleInfo in ipairs(essentialModules) do
-        SmartYield(5)
-        
-        if LoadModule(moduleInfo) then
-            loadedCount = loadedCount + 1
-            print(string.format("[Loader] Essential module '%s' loaded", moduleInfo.name))
-        else
-            failedCount = failedCount + 1
-        end
-        
-        -- Delay after essential modules to allow game to recover
-        if i == 1 then
-            -- After core module: MUCH longer delay (core loads WindUI which is heavy)
-            print("[Loader] Core module loaded. Waiting 10 seconds for game to stabilize...")
-            SmartYield(600)  -- ~10 seconds (allows WindUI and all systems to fully initialize)
-            print("[Loader] ✓ Game stabilized, continuing...")
-        else
-            -- After farm module
-            SmartYield(120)  -- ~2 seconds after farm
-        end
-    end
-    
-    print("[Loader] Essential modules loaded. Loading optional modules in background...")
-    
-    -- Load optional modules with longer delays
-    for i, moduleInfo in ipairs(optionalModules) do
-        SmartYield(10)
-        
-        if LoadModule(moduleInfo) then
-            loadedCount = loadedCount + 1
-        else
-            failedCount = failedCount + 1
-        end
-        
-        -- Even longer delay for optional modules to prevent freeze
-        if moduleInfo.name == "premium" or moduleInfo.name == "automatic" then
-            SmartYield(120)  -- ~2 seconds for large modules
-        else
-            SmartYield(90)  -- ~1.5 seconds for smaller modules
-        end
-    end
+    -- Small delay between loads to prevent overwhelming
+    task.wait(0.1)
+end
 
-    local loadTime = tick() - startTime
+local loadTime = tick() - startTime
 
-    print("========================================")
-    print(string.format("[HookID] Loader completed in %.2fs", loadTime))
-    print(string.format("Loaded: %d modules | Failed: %d modules", loadedCount, failedCount))
-    print("========================================")
-end)
+print("========================================")
+print(string.format("[HookID] Loader completed in %.2fs", loadTime))
+print(string.format("Loaded: %d modules | Failed: %d modules", loadedCount, failedCount))
+print("========================================")
 
