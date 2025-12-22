@@ -6584,6 +6584,12 @@ local autoJoinEventActive = false
 local LOCHNESS_POS = Vector3.new(6063.347, -585.925, 4713.696)
 local LOCHNESS_LOOK = Vector3.new(-0.376, -0.000, -0.927)
 
+-- Christmas Cave Event Variables
+local lastPositionBeforeChristmasCave = nil
+local autoJoinChristmasCaveActive = false
+local CHRISTMAS_CAVE_POS = Vector3.new(605.353, -580.581, 8885.047)
+local CHRISTMAS_CAVE_LOOK = Vector3.new(-1.000, -0.000, -0.012)
+
 -- *** AUTO UNLOCK RUIN DOOR ***
 local AUTO_UNLOCK_STATE = false
 local AUTO_UNLOCK_THREAD = nil
@@ -6974,6 +6980,185 @@ end
 		end
 end
 	})
+
+	-- =================================================================
+	-- CHRISTMAS CAVE EVENT SECTION
+	-- =================================================================
+	local christmascave = Event:Section({
+		Title = "Christmas Cave Event",
+		TextSize = 20,
+	})
+	
+	local ChristmasCaveCountdownParagraph = christmascave:Paragraph({
+		Title = "Event Countdown: Waiting...",
+		Content = "Status: Trying to sync event...",
+		Icon = "clock"
+	})
+	
+	local ChristmasCaveStatsParagraph = christmascave:Paragraph({
+		Title = "Event Stats: N/A",
+		Content = "Timer: N/A",
+		Icon = "trending-up"
+	})
+	
+	local ChristmasCaveSyncThread = nil
+	
+	-- Christmas Cave Event Schedule: Every 2 hours, lasts 30 minutes
+	local CHRISTMAS_CAVE_CYCLE_MINUTES = 120 -- 2 hours
+	local CHRISTMAS_CAVE_DURATION_MINUTES = 30 -- Event duration
+	
+	local function UpdateChristmasCaveStats()
+		local gui = GetEventGUI()
+		
+		if not gui then
+			ChristmasCaveCountdownParagraph:SetTitle("Event Countdown: GUI Not Found")
+			ChristmasCaveCountdownParagraph:SetDesc("Make sure 'Event Tracker' is loaded in workspace.")
+			ChristmasCaveStatsParagraph:SetTitle("Event Stats: N/A")
+			ChristmasCaveStatsParagraph:SetDesc("Timer: N/A")
+			return false
+		end
+		
+		-- Get timer from GUI for reference (to sync with server time accuracy)
+		local timerText = gui.Timer and (gui.Timer.ContentText or gui.Timer.Text) or "N/A"
+		
+		-- Calculate Christmas Cave countdown based on 2-hour cycle (not from GUI countdown which is for other events)
+		local currentTime = os.time()
+		local timeTable = os.date("*t", currentTime)
+		local totalMinutes = (timeTable.hour * 60) + timeTable.min
+		local cyclePosition = totalMinutes % CHRISTMAS_CAVE_CYCLE_MINUTES
+		
+		local eventStatus = "Event Closed"
+		local isEventActive = false
+		local minutesUntilNext = 0
+		
+		-- Christmas Cave is active for first 30 minutes of each 2-hour cycle
+		if cyclePosition < CHRISTMAS_CAVE_DURATION_MINUTES then
+			eventStatus = "Event Started"
+			isEventActive = true
+			minutesUntilNext = CHRISTMAS_CAVE_DURATION_MINUTES - cyclePosition -- Time until event ends
+		else
+			eventStatus = "Event Closed"
+			isEventActive = false
+			minutesUntilNext = CHRISTMAS_CAVE_CYCLE_MINUTES - cyclePosition -- Time until next event starts
+		end
+		
+		-- Calculate seconds for more accurate countdown (using current seconds)
+		local currentSeconds = timeTable.sec or 0
+		local totalSecondsUntilNext = (minutesUntilNext * 60) - currentSeconds
+		if totalSecondsUntilNext < 0 then totalSecondsUntilNext = 0 end
+		
+		-- Format countdown for Christmas Cave (2-hour cycle)
+		local hours = math.floor(totalSecondsUntilNext / 3600)
+		local mins = math.floor((totalSecondsUntilNext % 3600) / 60)
+		local secs = math.floor(totalSecondsUntilNext % 60)
+		
+		local countdownText = ""
+		if hours > 0 then
+			countdownText = string.format("%dH %02dM %02dS", hours, mins, secs)
+		elseif mins > 0 then
+			countdownText = string.format("%dM %02dS", mins, secs)
+		else
+			countdownText = string.format("%dS", secs)
+		end
+		
+		-- Update UI with Christmas Cave specific countdown (2-hour cycle)
+		ChristmasCaveCountdownParagraph:SetTitle("Christmas Cave Start In:")
+		ChristmasCaveCountdownParagraph:SetDesc(countdownText)
+		
+		ChristmasCaveStatsParagraph:SetTitle("Christmas Cave Stats")
+		ChristmasCaveStatsParagraph:SetDesc(string.format("Status: %s\nCycle: Every 2 hours (30 min duration)", eventStatus))
+		
+		return isEventActive
+	end
+	
+	local function RunChristmasCaveSyncLoop()
+		if ChristmasCaveSyncThread then task.cancel(ChristmasCaveSyncThread) end
+		
+		ChristmasCaveSyncThread = task.spawn(function()
+			local isTeleportedToEvent = false
+			
+			while true do
+				local isEventActive = UpdateChristmasCaveStats()
+				
+				if autoJoinChristmasCaveActive then
+					if isEventActive and not isTeleportedToEvent then
+						if lastPositionBeforeChristmasCave == nil then
+							local hrp = GetHRP()
+							if hrp then
+								lastPositionBeforeChristmasCave = {
+									Pos = hrp.Position,
+									Look = hrp.CFrame.LookVector
+								}
+								WindUI:Notify({ 
+									Title = "Position Saved", 
+									Content = "Position before Event saved.", 
+									Duration = 2, 
+									Icon = "save" 
+								})
+							end
+						end
+						
+						TeleportToLookAt(CHRISTMAS_CAVE_POS, CHRISTMAS_CAVE_LOOK)
+						isTeleportedToEvent = true
+						WindUI:Notify({ 
+							Title = "Auto Join ON", 
+							Content = "Teleport to Christmas Cave.", 
+							Duration = 4, 
+							Icon = "zap" 
+						})
+						
+					elseif isTeleportedToEvent and not isEventActive and lastPositionBeforeChristmasCave ~= nil then
+						-- Tunggu 15 detik sebelum kembali
+						WindUI:Notify({ 
+							Title = "Event Completed", 
+							Content = "Waiting 15 seconds before returning...", 
+							Duration = 5, 
+							Icon = "clock" 
+						})
+						task.wait(15)
+						
+						TeleportToLookAt(lastPositionBeforeChristmasCave.Pos, lastPositionBeforeChristmasCave.Look)
+						lastPositionBeforeChristmasCave = nil
+						isTeleportedToEvent = false
+						WindUI:Notify({ 
+							Title = "Teleport Back", 
+							Content = "Returning to original position.", 
+							Duration = 3, 
+							Icon = "repeat" 
+						})
+					end
+				end
+				
+				task.wait(0.5)
+			end
+		end)
+	end
+	
+	RunChristmasCaveSyncLoop()
+	
+	local ChristmasCaveToggle = Reg("tchristmascave", christmascave:Toggle({
+		Title = "Auto Join Christmas Cave Event",
+		Desc = "Automatically teleport to event when active, and return when event ends.",
+		Value = false,
+		Callback = function(state)
+			autoJoinChristmasCaveActive = state
+			if state then
+				WindUI:Notify({ 
+					Title = "Auto Join ON", 
+					Content = "Starting to monitor Christmas Cave event.", 
+					Duration = 3, 
+					Icon = "check" 
+				})
+			else
+				WindUI:Notify({ 
+					Title = "Auto Join OFF", 
+					Content = "Monitoring stopped.", 
+					Duration = 3, 
+					Icon = "x" 
+				})
+			end
+		end
+	}))
 
 end
 
@@ -8223,42 +8408,44 @@ utility:Divider()
         end
     }))
 
-    -- OTHER
-    local other = utility:Section({
-        Title = "Other",
-        TextSize = 20,
-    })
+    -- OTHER (Wrapped in do block to reduce local register usage)
+    do
+        local other = utility:Section({
+            Title = "Other",
+            TextSize = 20,
+        })
 
-    local isHideActive = false
-    local hideConnection = nil
-    local hideConnectionId = "hideConnection"
-    
-    local customName = ".gg/HookID"
-    local customLevel = "Lvl. 999" 
+        -- Hide Username section (isolated in separate block)
+        do
+            local customName = ".gg/HookID"
+            local customLevel = "Lvl. 999" 
+            local isHideActive = false
+            local hideConnection = nil
+            local hideConnectionId = "hideConnection"
 
-    local custname = Reg("cfakennme",other:Input({
-        Title = "Custom Fake Name",
-        Desc = "Fake name that will appear on the player's head.",
-        Value = customName,
-        Placeholder = "Hidden User",
-        Icon = "user-x",
-        Callback = function(text)
-            customName = text
-        end
-    }))
+            local custname = Reg("cfakennme",other:Input({
+                Title = "Custom Fake Name",
+                Desc = "Fake name that will appear on the player's head.",
+                Value = customName,
+                Placeholder = "Hidden User",
+                Icon = "user-x",
+                Callback = function(text)
+                    customName = text
+                end
+            }))
 
-   local custlvl = Reg("cfkelvl",other:Input({
-        Title = "Custom Fake Level",
-        Desc = "Fake level (example: 'Lvl. 100' or 'Max').",
-        Value = customLevel,
-        Placeholder = "Lvl. 999",
-        Icon = "bar-chart-2",
-        Callback = function(text)
-            customLevel = text
-        end
-    }))
+            local custlvl = Reg("cfkelvl",other:Input({
+                Title = "Custom Fake Level",
+                Desc = "Fake level (example: 'Lvl. 100' or 'Max').",
+                Value = customLevel,
+                Placeholder = "Lvl. 999",
+                Icon = "bar-chart-2",
+                Callback = function(text)
+                    customLevel = text
+                end
+            }))
 
-    local hideusn = Reg("hideallusr",other:Toggle({
+            local hideusn = Reg("hideallusr",other:Toggle({
         Title = "Hide All Usernames (Streamer Mode Only)",
         Value = false,
         Callback = function(state)
@@ -8334,126 +8521,132 @@ utility:Divider()
                 end
             end
         end
-    }))
+        }))
+        end -- Close Hide Username block
 
-    -- 2. TOGGLE PLAYER ESP (Wrapped in do block to reduce local register usage)
+    -- 2. TOGGLE PLAYER ESP (Completely isolated block to avoid local register limit)
     do
+        -- Get reference to other section from parent scope (capture it)
+        local otherSection = other
+        
+        -- ESP variables (all in isolated scope)
         local runService = game:GetService("RunService")
         local players = game:GetService("Players")
+        local LocalPlayer = game.Players.LocalPlayer
         local STUD_TO_M = 0.28
         local espEnabled = false
         local espConnections = {}
 
-        local function removeESP(targetPlayer)
-        if not targetPlayer then return end
-        local data = espConnections[targetPlayer]
-        if data then
-            if data.distanceConn then pcall(function() data.distanceConn:Disconnect() end) end
-            if data.charAddedConn then pcall(function() data.charAddedConn:Disconnect() end) end
-            if data.billboard and data.billboard.Parent then pcall(function() data.billboard:Destroy() end) end
-            espConnections[targetPlayer] = nil
-        else
-            if targetPlayer.Character then
-                for _, v in ipairs(targetPlayer.Character:GetChildren()) do
-                    if v.Name == "HookIDESP" and v:IsA("BillboardGui") then pcall(function() v:Destroy() end) end
+            local function removeESP(targetPlayer)
+                if not targetPlayer then return end
+                local data = espConnections[targetPlayer]
+                if data then
+                    if data.distanceConn then pcall(function() data.distanceConn:Disconnect() end) end
+                    if data.charAddedConn then pcall(function() data.charAddedConn:Disconnect() end) end
+                    if data.billboard and data.billboard.Parent then pcall(function() data.billboard:Destroy() end) end
+                    espConnections[targetPlayer] = nil
+                else
+                    if targetPlayer.Character then
+                        for _, v in ipairs(targetPlayer.Character:GetChildren()) do
+                            if v.Name == "HookIDESP" and v:IsA("BillboardGui") then pcall(function() v:Destroy() end) end
+                        end
+                    end
                 end
             end
-        end
-    end
 
-    local function createESP(targetPlayer)
-        if not targetPlayer or not targetPlayer.Character or targetPlayer == LocalPlayer then return end
+            local function createESP(targetPlayer)
+            if not targetPlayer or not targetPlayer.Character or targetPlayer == LocalPlayer then return end
 
-        removeESP(targetPlayer)
-        local char = targetPlayer.Character
-        local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-        if not hrp then return end
+            removeESP(targetPlayer)
+            local char = targetPlayer.Character
+            local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+            if not hrp then return end
 
-        local BillboardGui = Instance.new("BillboardGui")
-        BillboardGui.Name = "HookIDESP"
-        BillboardGui.Adornee = hrp
-        BillboardGui.Size = UDim2.new(0, 140, 0, 40)
-        BillboardGui.AlwaysOnTop = true
-        BillboardGui.StudsOffset = Vector3.new(0, 2.6, 0)
-        BillboardGui.Parent = char
+            local BillboardGui = Instance.new("BillboardGui")
+            BillboardGui.Name = "HookIDESP"
+            BillboardGui.Adornee = hrp
+            BillboardGui.Size = UDim2.new(0, 140, 0, 40)
+            BillboardGui.AlwaysOnTop = true
+            BillboardGui.StudsOffset = Vector3.new(0, 2.6, 0)
+            BillboardGui.Parent = char
 
-        local Frame = Instance.new("Frame")
-        Frame.Size = UDim2.new(1, 0, 1, 0)
-        Frame.BackgroundTransparency = 1
-        Frame.BorderSizePixel = 0
-        Frame.Parent = BillboardGui
+            local Frame = Instance.new("Frame")
+            Frame.Size = UDim2.new(1, 0, 1, 0)
+            Frame.BackgroundTransparency = 1
+            Frame.BorderSizePixel = 0
+            Frame.Parent = BillboardGui
 
-        local NameLabel = Instance.new("TextLabel")
-        NameLabel.Parent = Frame
-        NameLabel.Size = UDim2.new(1, 0, 0.6, 0)
-        NameLabel.Position = UDim2.new(0, 0, 0, 0)
-        NameLabel.BackgroundTransparency = 1
-        NameLabel.Text = tostring(targetPlayer.DisplayName or targetPlayer.Name)
-        NameLabel.TextColor3 = Color3.fromRGB(255, 230, 230)
-        NameLabel.TextStrokeTransparency = 0.7
-        NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextScaled = true
+            local NameLabel = Instance.new("TextLabel")
+            NameLabel.Parent = Frame
+            NameLabel.Size = UDim2.new(1, 0, 0.6, 0)
+            NameLabel.Position = UDim2.new(0, 0, 0, 0)
+            NameLabel.BackgroundTransparency = 1
+            NameLabel.Text = tostring(targetPlayer.DisplayName or targetPlayer.Name)
+            NameLabel.TextColor3 = Color3.fromRGB(255, 230, 230)
+            NameLabel.TextStrokeTransparency = 0.7
+            NameLabel.Font = Enum.Font.GothamBold
+            NameLabel.TextScaled = true
 
-        local DistanceLabel = Instance.new("TextLabel")
-        DistanceLabel.Parent = Frame
-        DistanceLabel.Size = UDim2.new(1, 0, 0.4, 0)
-        DistanceLabel.Position = UDim2.new(0, 0, 0.6, 0)
-        DistanceLabel.BackgroundTransparency = 1
-        DistanceLabel.Text = "0.0 m"
-        DistanceLabel.TextColor3 = Color3.fromRGB(210, 210, 210)
-        NameLabel.TextStrokeTransparency = 0.85
-        DistanceLabel.Font = Enum.Font.GothamSemibold
-        DistanceLabel.TextScaled = true
+            local DistanceLabel = Instance.new("TextLabel")
+            DistanceLabel.Parent = Frame
+            DistanceLabel.Size = UDim2.new(1, 0, 0.4, 0)
+            DistanceLabel.Position = UDim2.new(0, 0, 0.6, 0)
+            DistanceLabel.BackgroundTransparency = 1
+            DistanceLabel.Text = "0.0 m"
+            DistanceLabel.TextColor3 = Color3.fromRGB(210, 210, 210)
+            NameLabel.TextStrokeTransparency = 0.85
+            DistanceLabel.Font = Enum.Font.GothamSemibold
+            DistanceLabel.TextScaled = true
 
-        espConnections[targetPlayer] = { billboard = BillboardGui }
+            espConnections[targetPlayer] = { billboard = BillboardGui }
 
-        local distanceConn = runService.RenderStepped:Connect(function()
-            if not espEnabled or not hrp or not hrp.Parent then removeESP(targetPlayer) return end
-            local localChar = LocalPlayer.Character
-            local localHRP = localChar and localChar:FindFirstChild("HumanoidRootPart")
-            if localHRP then
-                local distStuds = (localHRP.Position - hrp.Position).Magnitude
-                local distMeters = distStuds * STUD_TO_M
-                DistanceLabel.Text = string.format("%.1f m", distMeters)
-            end
-        end)
-        espConnections[targetPlayer].distanceConn = distanceConn
-
-        local charAddedConn = targetPlayer.CharacterAdded:Connect(function()
-            task.wait(0.8)
-            if espEnabled then createESP(targetPlayer) end
-        end)
-        espConnections[targetPlayer].charAddedConn = charAddedConn
-    end
-
-    local espplay = Reg("esp",other:Toggle({
-        Title = "Player ESP",
-        Value = false,
-        Callback = function(state)
-            espEnabled = state
-            if state then
-                WindUI:Notify({ Title = "ESP Aktif", Duration = 3, Icon = "eye", })
-                for _, plr in ipairs(players:GetPlayers()) do
-                    if plr ~= LocalPlayer then createESP(plr) end
+            local distanceConn = runService.RenderStepped:Connect(function()
+                if not espEnabled or not hrp or not hrp.Parent then removeESP(targetPlayer) return end
+                local localChar = LocalPlayer.Character
+                local localHRP = localChar and localChar:FindFirstChild("HumanoidRootPart")
+                if localHRP then
+                    local distStuds = (localHRP.Position - hrp.Position).Magnitude
+                    local distMeters = distStuds * STUD_TO_M
+                    DistanceLabel.Text = string.format("%.1f m", distMeters)
                 end
-                espConnections["playerAddedConn"] = players.PlayerAdded:Connect(function(plr)
-                    task.wait(1)
-                    if espEnabled then createESP(plr) end
-                end)
-                espConnections["playerRemovingConn"] = players.PlayerRemoving:Connect(function(plr)
-                    removeESP(plr)
-                end)
-            else
-                WindUI:Notify({ Title = "ESP Nonaktif", Content = "Semua marker ESP dihapus.", Duration = 3, Icon = "eye-off", })
-                for plr, _ in pairs(espConnections) do
-                    if plr and typeof(plr) == "Instance" then removeESP(plr) end
-                end
-                if espConnections["playerAddedConn"] then espConnections["playerAddedConn"]:Disconnect() end
-                if espConnections["playerRemovingConn"] then espConnections["playerRemovingConn"]:Disconnect() end
-                espConnections = {}
+            end)
+            espConnections[targetPlayer].distanceConn = distanceConn
+
+            local charAddedConn = targetPlayer.CharacterAdded:Connect(function()
+                task.wait(0.8)
+                if espEnabled then createESP(targetPlayer) end
+            end)
+            espConnections[targetPlayer].charAddedConn = charAddedConn
             end
-        end
-    }))
+
+            Reg("esp", otherSection:Toggle({
+            Title = "Player ESP",
+            Value = false,
+            Callback = function(state)
+                espEnabled = state
+                if state then
+                    WindUI:Notify({ Title = "ESP Aktif", Duration = 3, Icon = "eye", })
+                    for _, plr in ipairs(players:GetPlayers()) do
+                        if plr ~= LocalPlayer then createESP(plr) end
+                    end
+                    espConnections["playerAddedConn"] = players.PlayerAdded:Connect(function(plr)
+                        task.wait(1)
+                        if espEnabled then createESP(plr) end
+                    end)
+                    espConnections["playerRemovingConn"] = players.PlayerRemoving:Connect(function(plr)
+                        removeESP(plr)
+                    end)
+                else
+                    WindUI:Notify({ Title = "ESP Nonaktif", Content = "Semua marker ESP dihapus.", Duration = 3, Icon = "eye-off", })
+                    for plr, _ in pairs(espConnections) do
+                        if plr and typeof(plr) == "Instance" then removeESP(plr) end
+                    end
+                    if espConnections["playerAddedConn"] then espConnections["playerAddedConn"]:Disconnect() end
+                    if espConnections["playerRemovingConn"] then espConnections["playerRemovingConn"]:Disconnect() end
+                    espConnections = {}
+                end
+            end
+        }))
     end -- Close ESP do block
 
     -- Wrap in do block to create new scope and avoid local register limit
@@ -8490,6 +8683,8 @@ utility:Divider()
             end
         })
     end
+    
+    end -- Close "other" section do block
     
 end
 
