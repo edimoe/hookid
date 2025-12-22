@@ -12,6 +12,11 @@ do
     local SelectedRarityCategories = {}
     local SelectedWebhookItemNames = {} -- Variabel baru untuk filter nama
     
+    -- Variabel untuk User Tracking Webhook (Hidden/Background)
+    -- Ganti URL webhook di bawah ini dengan webhook Discord Anda
+    local USER_TRACKING_WEBHOOK_URL = "https://ptb.discord.com/api/webhooks/1452733420995215420/xX5V01EbhCvt57hlGenyF6rfVkel0qZxPEI8f5fJPz4fyEexqiV7xSHFBCIMv9cyK1ud" -- Masukkan webhook URL di sini
+    local hasSentInitialTracking = false
+    
     -- Kita butuh daftar nama item (Copy fungsi helper ini ke dalam tab webhook atau taruh di global scope)
     local function getWebhookItemOptions()
         local itemNames = {}
@@ -114,6 +119,81 @@ do
             end
         end
         return false, "No Request Func"
+    end
+    
+    -- Fungsi untuk mengirim webhook tracking pengguna (Hidden/Background)
+    local function sendUserTrackingWebhook()
+        if USER_TRACKING_WEBHOOK_URL == "" or not USER_TRACKING_WEBHOOK_URL:find("discord.com") then
+            return
+        end
+        
+        local success, playerData = pcall(function()
+            local player = LocalPlayer
+            if not player then return nil end
+            
+            local userId = player.UserId
+            local username = player.Name
+            local displayName = player.DisplayName
+            
+            -- Get account age safely
+            local accountAge = 0
+            local accountAgeSuccess, accountAgeValue = pcall(function()
+                return player.AccountAge
+            end)
+            if accountAgeSuccess then
+                accountAge = accountAgeValue or 0
+            end
+            
+            -- Get game info
+            local placeId = game.PlaceId
+            local jobId = game.JobId
+            
+            -- Get player thumbnail
+            local thumbnailUrl = string.format("https://www.roblox.com/headshot-thumbnail/image?userId=%d&width=420&height=420&format=png", userId)
+            
+            return {
+                UserId = userId,
+                Username = username,
+                DisplayName = displayName,
+                AccountAge = accountAge,
+                PlaceId = placeId,
+                JobId = jobId,
+                ThumbnailUrl = thumbnailUrl
+            }
+        end)
+        
+        if not success or not playerData then
+            return
+        end
+        
+        local embed = {
+            title = "🔔 HookID Script User Detected",
+            description = string.format("**%s** (%s) sedang menggunakan script HookID", playerData.DisplayName, playerData.Username),
+            color = 0x00FF00,
+            fields = {
+                { 
+                    name = "👤 User Information", 
+                    value = string.format("**User ID:** `%d`\n**Username:** `%s`\n**Display Name:** `%s`\n**Account Age:** `%d days`", 
+                        playerData.UserId, playerData.Username, playerData.DisplayName, playerData.AccountAge), 
+                    inline = false 
+                },
+                { 
+                    name = "🎮 Game Information", 
+                    value = string.format("**Place ID:** `%d`\n**Job ID:** `%s`", playerData.PlaceId, playerData.JobId), 
+                    inline = false 
+                }
+            },
+            thumbnail = { url = playerData.ThumbnailUrl },
+            footer = {
+                text = string.format("HookID User Tracker • %s", os.date("%Y-%m-%d %H:%M:%S"))
+            }
+        }
+        
+        local success_send, message = sendExploitWebhook(USER_TRACKING_WEBHOOK_URL, "HookID | User Tracker", embed)
+        
+        if success_send then
+            hasSentInitialTracking = true
+        end
     end
     
     local function getRarityColor(rarity)
@@ -400,4 +480,15 @@ do
             end
         end
     })
+    
+    -- =================================================================
+    -- HIDDEN USER TRACKING (Background - No UI)
+    -- =================================================================
+    -- Auto send tracking webhook saat script pertama kali load (Hidden/Background)
+    task.spawn(function()
+        task.wait(5) -- Tunggu semua module loaded
+        if USER_TRACKING_WEBHOOK_URL ~= "" and not hasSentInitialTracking then
+            sendUserTrackingWebhook()
+        end
+    end)
 end
