@@ -24,14 +24,29 @@ local MODULE_LOAD_ORDER = {
     { name = "about", path = "modules/tabs/about.lua", required = false },
 }
 
--- Load module with error handling
+-- Load module with error handling (with better yielding)
 local function LoadModule(moduleInfo)
     local success, err = pcall(function()
+        -- Yield before HTTP request to prevent freeze
+        for i = 1, 2 do task.wait() end
+        
         local url = MODULE_BASE_URL .. moduleInfo.path
         local content = game:HttpGet(url, true)
+        
+        -- Yield after HTTP request
+        for i = 1, 2 do task.wait() end
+        
         local func = loadstring(content)
         if func then
+            -- Yield before executing module
+            for i = 1, 3 do task.wait() end
+            
+            -- Execute module (this may take time for large modules)
             func()
+            
+            -- Yield after executing module
+            for i = 1, 2 do task.wait() end
+            
             print(string.format("[Loader] ✓ Loaded module: %s", moduleInfo.name))
             return true
         else
@@ -52,30 +67,42 @@ local function LoadModule(moduleInfo)
     return true
 end
 
--- Main loader
-print("========================================")
-print("[HookID] Starting modular loader...")
-print("========================================")
+-- Main loader (async to prevent freezing)
+task.spawn(function()
+    print("========================================")
+    print("[HookID] Starting modular loader...")
+    print("========================================")
 
-local startTime = tick()
-local loadedCount = 0
-local failedCount = 0
+    local startTime = tick()
+    local loadedCount = 0
+    local failedCount = 0
 
-for _, moduleInfo in ipairs(MODULE_LOAD_ORDER) do
-    if LoadModule(moduleInfo) then
-        loadedCount = loadedCount + 1
-    else
-        failedCount = failedCount + 1
+    for i, moduleInfo in ipairs(MODULE_LOAD_ORDER) do
+        -- Yield before each module
+        task.wait()
+        
+        if LoadModule(moduleInfo) then
+            loadedCount = loadedCount + 1
+        else
+            failedCount = failedCount + 1
+        end
+        
+        -- Longer delay between loads to prevent freezing
+        -- Core module gets more time (it's the largest)
+        if i == 1 then
+            for j = 1, 10 do task.wait() end  -- Core: ~1.6s delay (allows game to recover)
+        elseif i == 2 then
+            for j = 1, 5 do task.wait() end   -- Farm: ~800ms delay
+        else
+            for j = 1, 8 do task.wait() end   -- Other modules: ~1.3s delay
+        end
     end
-    
-    -- Small delay between loads to prevent overwhelming
-    task.wait(0.1)
-end
 
-local loadTime = tick() - startTime
+    local loadTime = tick() - startTime
 
-print("========================================")
-print(string.format("[HookID] Loader completed in %.2fs", loadTime))
-print(string.format("Loaded: %d modules | Failed: %d modules", loadedCount, failedCount))
-print("========================================")
+    print("========================================")
+    print(string.format("[HookID] Loader completed in %.2fs", loadTime))
+    print(string.format("Loaded: %d modules | Failed: %d modules", loadedCount, failedCount))
+    print("========================================")
+end)
 
