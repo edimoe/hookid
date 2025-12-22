@@ -13,6 +13,12 @@ do
 
 	local EventSyncThread = nil
 	
+	-- Christmas Cave Event Variables
+	local lastPositionBeforeChristmasCave = nil
+	local autoJoinChristmasCaveActive = false
+	local CHRISTMAS_CAVE_POS = Vector3.new(605.353, -580.581, 8885.047)
+	local CHRISTMAS_CAVE_LOOK = Vector3.new(-1.000, -0.000, -0.012)
+	
 	-- *** AUTO UNLOCK RUIN DOOR ***
 	local AUTO_UNLOCK_STATE = false
 	local AUTO_UNLOCK_THREAD = nil
