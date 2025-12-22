@@ -1,7 +1,9 @@
 --[[
     HOOKID | Fish Hub - Modular Loader
-    Loads modules one by one to reduce initial load time
+    Loads modules one by one with smart yielding to prevent freezing
 ]]
+
+local RunService = game:GetService("RunService")
 
 local MODULE_BASE_URL = "https://raw.githubusercontent.com/edimoe/hookid/refs/heads/main/"
 
@@ -24,30 +26,51 @@ local MODULE_LOAD_ORDER = {
     { name = "about", path = "modules/tabs/about.lua", required = false },
 }
 
--- Load module with error handling (with better yielding)
+-- Smart yield function using RunService.Heartbeat for smoother yielding
+local function SmartYield(count)
+    count = count or 1
+    for i = 1, count do
+        RunService.Heartbeat:Wait()
+    end
+end
+
+-- Execute function with chunk-based yielding (for large modules)
+local function ExecuteWithYielding(func)
+    -- Try to execute, but if it takes too long, the yield points in the module itself will help
+    local success, err = pcall(func)
+    if not success then
+        error(err)
+    end
+end
+
+-- Load module with error handling (with smart yielding)
 local function LoadModule(moduleInfo)
     local success, err = pcall(function()
-        -- Yield before HTTP request to prevent freeze
-        for i = 1, 2 do task.wait() end
+        -- Yield before HTTP request
+        SmartYield(3)
         
         local url = MODULE_BASE_URL .. moduleInfo.path
         local content = game:HttpGet(url, true)
         
         -- Yield after HTTP request
-        for i = 1, 2 do task.wait() end
+        SmartYield(3)
         
         local func = loadstring(content)
         if func then
-            -- Yield before executing module
-            for i = 1, 3 do task.wait() end
+            -- Yield before executing module (more aggressive for large modules)
+            SmartYield(10)
             
-            -- Execute module (this may take time for large modules)
+            -- Execute module with setfenv
+            local env = getfenv(0)
+            setfenv(func, env)
+            
+            -- Execute module (unfortunately can't chunk this, but yield points help)
             func()
+            print(string.format("[Loader] ✓ Loaded module: %s", moduleInfo.name))
             
             -- Yield after executing module
-            for i = 1, 2 do task.wait() end
+            SmartYield(5)
             
-            print(string.format("[Loader] ✓ Loaded module: %s", moduleInfo.name))
             return true
         else
             error("Failed to compile module: " .. moduleInfo.name)
@@ -68,6 +91,7 @@ local function LoadModule(moduleInfo)
 end
 
 -- Main loader (async to prevent freezing)
+-- Load essential modules first, then load others in background
 task.spawn(function()
     print("========================================")
     print("[HookID] Starting modular loader...")
@@ -76,10 +100,40 @@ task.spawn(function()
     local startTime = tick()
     local loadedCount = 0
     local failedCount = 0
-
-    for i, moduleInfo in ipairs(MODULE_LOAD_ORDER) do
-        -- Yield before each module
-        task.wait()
+    
+    -- Separate essential and optional modules
+    local essentialModules = {}
+    local optionalModules = {}
+    
+    for _, moduleInfo in ipairs(MODULE_LOAD_ORDER) do
+        if moduleInfo.required then
+            table.insert(essentialModules, moduleInfo)
+        else
+            table.insert(optionalModules, moduleInfo)
+        end
+    end
+    
+    -- Load essential modules first (core, farm)
+    print("[Loader] Loading essential modules...")
+    for i, moduleInfo in ipairs(essentialModules) do
+        SmartYield(5)
+        
+        if LoadModule(moduleInfo) then
+            loadedCount = loadedCount + 1
+            print(string.format("[Loader] Essential module '%s' loaded", moduleInfo.name))
+        else
+            failedCount = failedCount + 1
+        end
+        
+        -- Longer delay after essential modules to allow game to recover
+        SmartYield(240)  -- ~4 seconds (critical for preventing freeze after core)
+    end
+    
+    print("[Loader] Essential modules loaded. Loading optional modules in background...")
+    
+    -- Load optional modules with longer delays
+    for i, moduleInfo in ipairs(optionalModules) do
+        SmartYield(10)
         
         if LoadModule(moduleInfo) then
             loadedCount = loadedCount + 1
@@ -87,14 +141,11 @@ task.spawn(function()
             failedCount = failedCount + 1
         end
         
-        -- Longer delay between loads to prevent freezing
-        -- Core module gets more time (it's the largest)
-        if i == 1 then
-            for j = 1, 10 do task.wait() end  -- Core: ~1.6s delay (allows game to recover)
-        elseif i == 2 then
-            for j = 1, 5 do task.wait() end   -- Farm: ~800ms delay
+        -- Even longer delay for optional modules to prevent freeze
+        if moduleInfo.name == "premium" or moduleInfo.name == "automatic" then
+            SmartYield(120)  -- ~2 seconds for large modules
         else
-            for j = 1, 8 do task.wait() end   -- Other modules: ~1.3s delay
+            SmartYield(90)  -- ~1.5 seconds for smaller modules
         end
     end
 
