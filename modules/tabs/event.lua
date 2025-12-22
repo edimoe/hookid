@@ -611,5 +611,3 @@ end
 	}))
 
 end
-
-GetRuinDoorStatus()
