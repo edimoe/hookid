@@ -531,79 +531,79 @@ do
                     end
                 end
                 
-                if not chargeSuccess then
-                    task.wait(0.1)
-                    continue
-                end
-                
-                -- OPTIMASI: Delay minimal antara charge dan cast
-                task.wait(0.001)
-                
-                -- 2. Start minigame dengan koordinat optimal (retry jika gagal)
-                local castSuccess = false
-                local castAttempts = 0
-                
-                while castAttempts < 3 and not castSuccess do
-                    castAttempts = castAttempts + 1
-                    castSuccess = pcall(function() 
-                        RF_RequestFishingMinigameStarted:InvokeServer(minigameX, minigameY) 
-                    end)
-                    if not castSuccess then
-                        task.wait(0.05)
-                    end
-                end
-                
-                if not castSuccess then
-                    task.wait(retryDelay)
-                    continue
-                end
-                
-                -- 3. Calculate precise wait time dengan safety margin
-                local elapsed = os.clock() - startTime
-                local baseWaitTime = completeDelay
-                
-                -- Adaptive delay: jika loop interval sangat cepat, pastikan complete delay cukup
-                if loopInterval < 1.0 then
-                    baseWaitTime = math.max(completeDelay, 2.8) -- Minimum 2.8s untuk kecepatan tinggi
-                end
-                
-                local completeWaitTime = baseWaitTime - elapsed
-                
-                -- Pastikan wait time cukup untuk server memproses
-                if completeWaitTime < 0.2 then
-                    completeWaitTime = 0.2 -- Minimum safety delay
-                end
-                
-                task.wait(completeWaitTime)
-                
-                -- 4. Complete fishing dengan retry
-                local completeSuccess = false
-                local completeAttempts = 0
-                
-                while completeAttempts < 5 and not completeSuccess do
-                    completeAttempts = completeAttempts + 1
-                    completeSuccess = pcall(function() 
-                        RE_FishingCompleted:FireServer() 
-                    end)
+                if chargeSuccess then
+                    -- OPTIMASI: Delay minimal antara charge dan cast
+                    task.wait(0.001)
                     
-                    if completeSuccess then
-                        success = true
-                        _G.BlatantLastCatchTime = os.clock()
-                        break
-                    else
-                        -- Tunggu sedikit sebelum retry complete
-                        task.wait(0.1)
+                    -- 2. Start minigame dengan koordinat optimal (retry jika gagal)
+                    local castSuccess = false
+                    local castAttempts = 0
+                    
+                    while castAttempts < 3 and not castSuccess do
+                        castAttempts = castAttempts + 1
+                        castSuccess = pcall(function() 
+                            RF_RequestFishingMinigameStarted:InvokeServer(minigameX, minigameY) 
+                        end)
+                        if not castSuccess then
+                            task.wait(0.05)
+                        end
                     end
-                end
-                
-                if success then
-                    -- 5. Cancel inputs (non-blocking) setelah berhasil
-                    task.wait(cancelDelay)
-                    pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-                    break -- Keluar dari loop utama jika berhasil
+                    
+                    if castSuccess then
+                        -- 3. Calculate precise wait time dengan safety margin
+                        local elapsed = os.clock() - startTime
+                        local baseWaitTime = completeDelay
+                        
+                        -- Adaptive delay: jika loop interval sangat cepat, pastikan complete delay cukup
+                        if loopInterval < 1.0 then
+                            baseWaitTime = math.max(completeDelay, 2.8) -- Minimum 2.8s untuk kecepatan tinggi
+                        end
+                        
+                        local completeWaitTime = baseWaitTime - elapsed
+                        
+                        -- Pastikan wait time cukup untuk server memproses
+                        if completeWaitTime < 0.2 then
+                            completeWaitTime = 0.2 -- Minimum safety delay
+                        end
+                        
+                        task.wait(completeWaitTime)
+                        
+                        -- 4. Complete fishing dengan retry
+                        local completeSuccess = false
+                        local completeAttempts = 0
+                        
+                        while completeAttempts < 5 and not completeSuccess do
+                            completeAttempts = completeAttempts + 1
+                            completeSuccess = pcall(function() 
+                                RE_FishingCompleted:FireServer() 
+                            end)
+                            
+                            if completeSuccess then
+                                success = true
+                                _G.BlatantLastCatchTime = os.clock()
+                                break
+                            else
+                                -- Tunggu sedikit sebelum retry complete
+                                task.wait(0.1)
+                            end
+                        end
+                        
+                        if success then
+                            -- 5. Cancel inputs (non-blocking) setelah berhasil
+                            task.wait(cancelDelay)
+                            pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+                            break -- Keluar dari loop utama jika berhasil
+                        else
+                            -- Retry jika complete gagal
+                            task.wait(retryDelay)
+                        end
+                    else
+                        -- Retry jika cast gagal
+                        task.wait(retryDelay)
+                    end
                 else
-                    -- Retry jika complete gagal
-                    task.wait(retryDelay)
+                    -- Retry jika charge gagal
+                    task.wait(0.1)
                 end
             end
             
