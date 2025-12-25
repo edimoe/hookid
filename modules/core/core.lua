@@ -1611,7 +1611,7 @@ FishingAreas = {
 function GetEventGUI()
     local success, gui = pcall(function()
         local menuRings = workspace:WaitForChild("!!! MENU RINGS", 5)
-        local eventTracker = workspace:WaitForChild("Event Tracker", 5)
+        local eventTracker = workspace:WaitForChild("!!! DEPENDENCIES"):WaitForChild("Event Tracker", 5)
         local contentItems = eventTracker.Main.Gui.Content.Items
 
         local countdown = contentItems.Countdown:WaitForChild("Label")	
@@ -1635,5 +1635,6 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
