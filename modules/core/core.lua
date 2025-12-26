@@ -1445,45 +1445,92 @@ eventsList = {
 
 
 function FindAndTeleportToTargetEvent()
-    if not autoEventTargetName or autoEventTargetName == "" then
-        return false
+    local targetName = autoEventTargetName
+    if not targetName or targetName == "" then return false end
+    
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    
+    local eventModel = nil
+    
+    if targetName == "Treasure Event" then
+        local sunkenFolder = workspace:FindFirstChild("Sunken Wreckage")
+        if sunkenFolder then
+            eventModel = sunkenFolder:FindFirstChild("Treasure")
+        end
+    
+    elseif targetName == "Worm Hunt" then
+        local menuRingsFolder = workspace:FindFirstChild("!!! MENU RINGS")
+        if menuRingsFolder then
+            for _, child in ipairs(menuRingsFolder:GetChildren()) do
+                if child.Name == "Props" then
+                    local specificModel = child:FindFirstChild("Model")
+                    if specificModel then
+                        eventModel = specificModel
+                        break
+                    end
+                end
+            end
+        end
+
+    else
+        local menuRingsFolder = workspace:FindFirstChild("!!! MENU RINGS") 
+        if menuRingsFolder then
+            for _, container in ipairs(menuRingsFolder:GetChildren()) do
+                if container:FindFirstChild(targetName) then
+                    eventModel = container:FindFirstChild(targetName)
+                    break
+                end
+            end
+        end
+    end
+    
+    if not eventModel then return false end 
+
+    local targetPart = nil
+    local positionOffset = Vector3.new(0, 15, 0) 
+    
+    if targetName == "Megalodon Hunt" then
+        targetPart = eventModel:FindFirstChild("Top") 
+        if targetPart then positionOffset = Vector3.new(0, 3, 0) end
+    elseif targetName == "Treasure Event" then
+        targetPart = eventModel
+        positionOffset = Vector3.new(0, 5, 0)
+    else
+        targetPart = eventModel:FindFirstChild("Fishing Boat")
+        if not targetPart then targetPart = eventModel end
+        positionOffset = Vector3.new(0, 15, 0)
     end
 
-    local eventData = GetEventFromTracker(autoEventTargetName)
-    if not eventData then
-        return false
+    if not targetPart then return false end
+
+    local targetCFrame = nil
+    
+    local success = pcall(function()
+        if targetPart:IsA("Model") then
+             targetCFrame = targetPart:GetPivot()
+        elseif targetPart:IsA("BasePart") then
+             targetCFrame = targetPart.CFrame
+        end
+    end)
+
+    if success and targetCFrame and typeof(targetCFrame) == "CFrame" then
+        local position = targetCFrame.p + positionOffset
+        local lookVector = targetCFrame.LookVector
+        
+        TeleportToLookAt(position, lookVector)
+        
+        WindUI:Notify({
+            Title = "Event Found!",
+            Content = "Teleported to: " .. targetName,
+            Icon = "map-pin",
+            Duration = 3
+        })
+        return true
     end
-
-    local posValue = eventData:FindFirstChild("Position")
-    local lookValue = eventData:FindFirstChild("LookVector")
-
-    if not posValue or not lookValue then
-        return false
-    end
-
-    local position = posValue.Value
-    local lookVector = lookValue.Value
-
-    local yOffset = CONSTANTS.EventTeleportYOffset
-
-    if autoEventTargetName == "Megalodon Hunt" then
-        yOffset = CONSTANTS.MegalodonTeleportYOffset
-    elseif autoEventTargetName == "Treasure Event" then
-        yOffset = CONSTANTS.TreasureEventYOffset
-    end
-
-    TeleportToLookAt(position + Vector3.new(0, yOffset, 0), lookVector)
-
-    WindUI:Notify({
-        Title = "Event Detected (GLOBAL)",
-        Content = "Teleported to: " .. autoEventTargetName,
-        Icon = "map-pin",
-        Duration = 3
-    })
-
-    return true
+    
+    return false
 end
-
 
 function RunAutoEventTeleportLoop()
     if autoEventTeleportThread then 
@@ -1564,7 +1611,7 @@ FishingAreas = {
 function GetEventGUI()
     local success, gui = pcall(function()
         local menuRings = workspace:WaitForChild("!!! MENU RINGS", 5)
-        local eventTracker = menuRings:WaitForChild("Event Tracker", 5)
+        local eventTracker = workspace:WaitForChild("!!! DEPENDENCIES"):WaitForChild("Event Tracker", 5)
         local contentItems = eventTracker.Main.Gui.Content.Items
 
         local countdown = contentItems.Countdown:WaitForChild("Label")	
@@ -1587,25 +1634,6 @@ function GetEventGUI()
     else
         return nil
     end
-end
-
--- =========================================================
--- GLOBAL EVENT TRACKER DETECTION (ANTI FAR DISTANCE)
--- =========================================================
-function GetEventFromTracker(eventName)
-    local deps = workspace:FindFirstChild("!!! DEPENDENCIES")
-    if not deps then return nil end
-
-    local tracker = deps:FindFirstChild("Event Tracker")
-    if not tracker then return nil end
-
-    for _, event in ipairs(tracker:GetChildren()) do
-        if event.Name == eventName then
-            return event
-        end
-    end
-
-    return nil
 end
 
 
