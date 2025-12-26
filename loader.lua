@@ -1,6 +1,6 @@
 --[[
-    HOOKID | Fish Hub - Modular Loader
-    Loads modules one by one to reduce initial load time
+    HOOKID | Fish Hub - Smooth Modular Loader
+    Loads modules one by one using coroutines to reduce freeze
 ]]
 
 local MODULE_BASE_URL = "https://raw.githubusercontent.com/edimoe/hookid/refs/heads/main/"
@@ -54,28 +54,35 @@ end
 
 -- Main loader
 print("========================================")
-print("[HookID] Starting modular loader...")
+print("[HookID] Starting smooth modular loader...")
 print("========================================")
 
 local startTime = tick()
 local loadedCount = 0
 local failedCount = 0
 
-for _, moduleInfo in ipairs(MODULE_LOAD_ORDER) do
-    if LoadModule(moduleInfo) then
-        loadedCount = loadedCount + 1
-    else
-        failedCount = failedCount + 1
-    end
-    
-    -- Small delay between loads to prevent overwhelming
-    task.wait(0.1)
+-- Load core first (blocking) to show GUI fast
+LoadModule(MODULE_LOAD_ORDER[1])
+loadedCount = loadedCount + 1
+
+-- Load remaining modules in coroutine to prevent freeze
+for i = 2, #MODULE_LOAD_ORDER do
+    local moduleInfo = MODULE_LOAD_ORDER[i]
+    task.spawn(function()
+        if LoadModule(moduleInfo) then
+            loadedCount = loadedCount + 1
+        else
+            failedCount = failedCount + 1
+        end
+    end)
+    task.wait(0.04) -- small delay between modules
 end
 
+-- Optional: wait a short moment to let coroutines start
+task.wait(0.1)
+
 local loadTime = tick() - startTime
-
 print("========================================")
-print(string.format("[HookID] Loader completed in %.2fs", loadTime))
-print(string.format("Loaded: %d modules | Failed: %d modules", loadedCount, failedCount))
+print(string.format("[HookID] Loader initiated in %.2fs", loadTime))
+print("Loaded modules (core started + coroutines): %d | Failed modules: %d", loadedCount, failedCount)
 print("========================================")
-
