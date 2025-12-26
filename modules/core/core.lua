@@ -1471,7 +1471,7 @@ function FindAndTeleportToTargetEvent()
             end
         end
 
-    elseif targetName == "BlackHole" then
+    elseif targetName == "Worm Hunt" then
         -- Cari BlackHole di semua folder Model
         for _, child in ipairs(workspace:GetChildren()) do
             local modelFolder = child:FindFirstChild("Model")
@@ -1524,7 +1524,7 @@ function FindAndTeleportToTargetEvent()
                 positionOffset = Vector3.new(0,3,0)
             end
         end
-    elseif targetName == "BlackHole" then
+    elseif targetName == "Worm Hunt" then
         if eventModel:IsA("Model") then
             targetPart = eventModel.PrimaryPart or eventModel:FindFirstChildWhichIsA("BasePart")
         elseif eventModel:IsA("BasePart") then
@@ -1678,6 +1678,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
