@@ -1459,20 +1459,6 @@ function FindAndTeleportToTargetEvent()
             eventModel = sunkenFolder:FindFirstChild("Treasure")
         end
     
-    elseif targetName == "Worm Hunt" then
-        local menuRingsFolder = workspace:FindFirstChild("!!! MENU RINGS")
-        if menuRingsFolder then
-            for _, child in ipairs(menuRingsFolder:GetChildren()) do
-                if child.Name == "Props" then
-                    local specificModel = child:FindFirstChild("Model")
-                    if specificModel then
-                        eventModel = specificModel
-                        break
-                    end
-                end
-            end
-        end
-
     elseif targetName == "Megalodon Hunt" then
         -- Handle Megalodon Hunt secara spesial, cari di semua Props
         local propsFolders = {}
@@ -1486,6 +1472,19 @@ function FindAndTeleportToTargetEvent()
             if meg then
                 eventModel = meg
                 break
+            end
+        end
+
+    elseif targetName == "Worm Hunt" then
+        -- Cari BlackHole di semua folder Model
+        for _, child in ipairs(workspace:GetChildren()) do
+            local modelFolder = child:FindFirstChild("Model")
+            if modelFolder then
+                local bh = modelFolder:FindFirstChild("BlackHole")
+                if bh then
+                    eventModel = bh
+                    break
+                end
             end
         end
 
@@ -1509,7 +1508,6 @@ function FindAndTeleportToTargetEvent()
     if targetName == "Megalodon Hunt" then
         local top = eventModel:FindFirstChild("Top")
         if top then
-            -- Jika Top adalah Model, ambil pivot atau BasePart
             if top:IsA("Model") then
                 targetPart = top
                 positionOffset = Vector3.new(0,3,0)
@@ -1518,6 +1516,13 @@ function FindAndTeleportToTargetEvent()
                 positionOffset = Vector3.new(0,3,0)
             end
         end
+    elseif targetName == "Worm Hunt" then
+        if eventModel:IsA("Model") then
+            targetPart = eventModel.PrimaryPart or eventModel:FindFirstChildWhichIsA("BasePart")
+        elseif eventModel:IsA("BasePart") then
+            targetPart = eventModel
+        end
+        positionOffset = Vector3.new(0,5,0)
     elseif targetName == "Treasure Event" then
         targetPart = eventModel
         positionOffset = Vector3.new(0, 5, 0)
@@ -1542,10 +1547,8 @@ function FindAndTeleportToTargetEvent()
         local position = targetCFrame.p + positionOffset
         local lookVector = targetCFrame.LookVector
         
-        -- Tetap panggil Teleport tanpa mengubah WindUI
         TeleportToLookAt(position, lookVector)
         
-        -- WindUI tetap aman, tidak diganggu
         if WindUI then
             WindUI:Notify({
                 Title = "Event Found!",
@@ -1559,6 +1562,7 @@ function FindAndTeleportToTargetEvent()
     
     return false
 end
+
 
 function RunAutoEventTeleportLoop()
     if autoEventTeleportThread then 
@@ -1663,6 +1667,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
