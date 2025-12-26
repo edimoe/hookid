@@ -1473,6 +1473,22 @@ function FindAndTeleportToTargetEvent()
             end
         end
 
+    elseif targetName == "Megalodon Hunt" then
+        -- Handle Megalodon Hunt secara spesial, cari di semua Props
+        local propsFolders = {}
+        for _, child in ipairs(workspace:GetChildren()) do
+            if child.Name == "Props" then
+                table.insert(propsFolders, child)
+            end
+        end
+        for _, props in ipairs(propsFolders) do
+            local meg = props:FindFirstChild("Megalodon Hunt")
+            if meg then
+                eventModel = meg
+                break
+            end
+        end
+
     else
         local menuRingsFolder = workspace:FindFirstChild("!!! MENU RINGS") 
         if menuRingsFolder then
@@ -1491,8 +1507,17 @@ function FindAndTeleportToTargetEvent()
     local positionOffset = Vector3.new(0, 15, 0) 
     
     if targetName == "Megalodon Hunt" then
-        targetPart = eventModel:FindFirstChild("Top") 
-        if targetPart then positionOffset = Vector3.new(0, 3, 0) end
+        local top = eventModel:FindFirstChild("Top")
+        if top then
+            -- Jika Top adalah Model, ambil pivot atau BasePart
+            if top:IsA("Model") then
+                targetPart = top
+                positionOffset = Vector3.new(0,3,0)
+            elseif top:IsA("BasePart") then
+                targetPart = top
+                positionOffset = Vector3.new(0,3,0)
+            end
+        end
     elseif targetName == "Treasure Event" then
         targetPart = eventModel
         positionOffset = Vector3.new(0, 5, 0)
@@ -1505,12 +1530,11 @@ function FindAndTeleportToTargetEvent()
     if not targetPart then return false end
 
     local targetCFrame = nil
-    
     local success = pcall(function()
         if targetPart:IsA("Model") then
-             targetCFrame = targetPart:GetPivot()
+            targetCFrame = targetPart:GetPivot()
         elseif targetPart:IsA("BasePart") then
-             targetCFrame = targetPart.CFrame
+            targetCFrame = targetPart.CFrame
         end
     end)
 
@@ -1518,14 +1542,18 @@ function FindAndTeleportToTargetEvent()
         local position = targetCFrame.p + positionOffset
         local lookVector = targetCFrame.LookVector
         
+        -- Tetap panggil Teleport tanpa mengubah WindUI
         TeleportToLookAt(position, lookVector)
         
-        WindUI:Notify({
-            Title = "Event Found!",
-            Content = "Teleported to: " .. targetName,
-            Icon = "map-pin",
-            Duration = 3
-        })
+        -- WindUI tetap aman, tidak diganggu
+        if WindUI then
+            WindUI:Notify({
+                Title = "Event Found!",
+                Content = "Teleported to: " .. targetName,
+                Icon = "map-pin",
+                Duration = 3
+            })
+        end
         return true
     end
     
@@ -1635,5 +1663,6 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
