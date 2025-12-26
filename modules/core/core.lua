@@ -1460,22 +1460,18 @@ function FindAndTeleportToTargetEvent()
         end
     
     elseif targetName == "Megalodon Hunt" then
-        -- Handle Megalodon Hunt secara spesial, cari di semua Props
-        local propsFolders = {}
+        -- Cari Megalodon Hunt di semua Props
         for _, child in ipairs(workspace:GetChildren()) do
             if child.Name == "Props" then
-                table.insert(propsFolders, child)
-            end
-        end
-        for _, props in ipairs(propsFolders) do
-            local meg = props:FindFirstChild("Megalodon Hunt")
-            if meg then
-                eventModel = meg
-                break
+                local meg = child:FindFirstChild("Megalodon Hunt")
+                if meg then
+                    eventModel = meg
+                    break
+                end
             end
         end
 
-    elseif targetName == "Worm Hunt" then
+    elseif targetName == "BlackHole" then
         -- Cari BlackHole di semua folder Model
         for _, child in ipairs(workspace:GetChildren()) do
             local modelFolder = child:FindFirstChild("Model")
@@ -1483,6 +1479,18 @@ function FindAndTeleportToTargetEvent()
                 local bh = modelFolder:FindFirstChild("BlackHole")
                 if bh then
                     eventModel = bh
+                    break
+                end
+            end
+        end
+
+    elseif targetName == "Ghost Shark Hunt" then
+        -- Cari Ghost Shark Hunt di semua Props
+        for _, child in ipairs(workspace:GetChildren()) do
+            if child.Name == "Props" then
+                local ghost = child:FindFirstChild("Ghost Shark Hunt")
+                if ghost then
+                    eventModel = ghost
                     break
                 end
             end
@@ -1516,7 +1524,7 @@ function FindAndTeleportToTargetEvent()
                 positionOffset = Vector3.new(0,3,0)
             end
         end
-    elseif targetName == "Worm Hunt" then
+    elseif targetName == "BlackHole" then
         if eventModel:IsA("Model") then
             targetPart = eventModel.PrimaryPart or eventModel:FindFirstChildWhichIsA("BasePart")
         elseif eventModel:IsA("BasePart") then
@@ -1526,6 +1534,10 @@ function FindAndTeleportToTargetEvent()
     elseif targetName == "Treasure Event" then
         targetPart = eventModel
         positionOffset = Vector3.new(0, 5, 0)
+    elseif targetName == "Ghost Shark Hunt" then
+        targetPart = eventModel:FindFirstChild("Fishing Boat")
+        if not targetPart then targetPart = eventModel end
+        positionOffset = Vector3.new(0,5,0)
     else
         targetPart = eventModel:FindFirstChild("Fishing Boat")
         if not targetPart then targetPart = eventModel end
@@ -1562,7 +1574,6 @@ function FindAndTeleportToTargetEvent()
     
     return false
 end
-
 
 function RunAutoEventTeleportLoop()
     if autoEventTeleportThread then 
@@ -1667,6 +1678,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
