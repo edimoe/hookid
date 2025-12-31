@@ -1485,11 +1485,11 @@ function FindAndTeleportToTargetEvent()
         end
 
     elseif targetName == "Admin Event" then
-        for _, child in ipairs(workspace:GetChildren()) do
-            if child.Name == "Props" then
-                local meg = child:FindFirstChild("Black Hole")
-                if meg then
-                    eventModel = meg
+        for _, v in ipairs(workspace:GetChildren()) do
+            if v.Name == "Props" then
+                local bh = v:FindFirstChild("Black Hole")
+                if bh then
+                    eventModel = bh
                     break
                 end
             end
@@ -1700,6 +1700,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
