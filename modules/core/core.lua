@@ -1543,7 +1543,7 @@ function FindAndTeleportToTargetEvent()
         end
         positionOffset = Vector3.new(0,5,0)
     elseif targetName == "Admin Event" then
-        local top = eventModel:FindFirstChild("Top")
+        local top = eventModel:FindFirstChild("Black Hole")
         if top then
             if top:IsA("Model") then
                 targetPart = top
@@ -1700,6 +1700,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
