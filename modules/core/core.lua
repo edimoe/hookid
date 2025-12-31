@@ -1485,15 +1485,10 @@ function FindAndTeleportToTargetEvent()
         end
 
     elseif targetName == "Admin Event" then
-        -- Cari BlackHole di semua folder Model
-        for _, child in ipairs(workspace:GetChildren()) do
-            local modelFolder = child:FindFirstChild("Model")
-            if modelFolder then
-                local bh = modelFolder:FindFirstChild("Black Hole")
-                if bh then
-                    eventModel = bh
-                    break
-                end
+        for _, v in ipairs(workspace:GetChildren()) do
+            if v.Name == "Black Hole" then
+                eventModel = v
+                break
             end
         end
 
@@ -1545,12 +1540,13 @@ function FindAndTeleportToTargetEvent()
         end
         positionOffset = Vector3.new(0,5,0)
     elseif targetName == "Admin Event" then
+        -- 🔥 FIX: Model aman
         if eventModel:IsA("Model") then
-            targetPart = eventModel.PrimaryPart or eventModel:FindFirstChildWhichIsA("BasePart")
-        elseif eventModel:IsA("BasePart") then
+            targetPart = eventModel
+        else
             targetPart = eventModel
         end
-        positionOffset = Vector3.new(0,5,0)
+        offset = Vector3.new(0, 8, 0)
     elseif targetName == "Treasure Event" then
         targetPart = eventModel
         positionOffset = Vector3.new(0, 5, 0)
@@ -1698,6 +1694,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
