@@ -1434,7 +1434,7 @@ function RunAutoEnchantLoop(rodUUID)
 end
 
 eventsList = { 
-    "Shark Hunt", "Ghost Shark Hunt", "Worm Hunt", "Black Hole", "Shocked", 
+    "Shark Hunt", "Ghost Shark Hunt", "Worm Hunt", "Admin Event", "Black Hole", "Shocked", 
     "Ghost Worm", "Meteor Rain", "Megalodon Hunt", "Treasure Event"
 }
 
@@ -1484,6 +1484,19 @@ function FindAndTeleportToTargetEvent()
             end
         end
 
+    elseif targetName == "Admin Event" then
+        -- Cari BlackHole di semua folder Model
+        for _, child in ipairs(workspace:GetChildren()) do
+            local modelFolder = child:FindFirstChild("Model")
+            if modelFolder then
+                local bh = modelFolder:FindFirstChild("Black Hole")
+                if bh then
+                    eventModel = bh
+                    break
+                end
+            end
+        end
+
     elseif targetName == "Ghost Shark Hunt" then
         -- Cari Ghost Shark Hunt di semua Props
         for _, child in ipairs(workspace:GetChildren()) do
@@ -1525,6 +1538,13 @@ function FindAndTeleportToTargetEvent()
             end
         end
     elseif targetName == "Worm Hunt" then
+        if eventModel:IsA("Model") then
+            targetPart = eventModel.PrimaryPart or eventModel:FindFirstChildWhichIsA("BasePart")
+        elseif eventModel:IsA("BasePart") then
+            targetPart = eventModel
+        end
+        positionOffset = Vector3.new(0,5,0)
+    elseif targetName == "Admin Event" then
         if eventModel:IsA("Model") then
             targetPart = eventModel.PrimaryPart or eventModel:FindFirstChildWhichIsA("BasePart")
         elseif eventModel:IsA("BasePart") then
@@ -1678,6 +1698,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
