@@ -1471,6 +1471,17 @@ function FindAndTeleportToTargetEvent()
             end
         end
 
+    elseif targetName == "Shark Hunt" then
+        for _, child in ipairs(workspace:GetChildren()) do
+            if child.Name == "Props" then
+                local shark = child:FindFirstChild("Shark Hunt")
+                if shark then
+                    eventModel = shark
+                    break
+                end
+            end
+        end
+
     elseif targetName == "Worm Hunt" then
         -- Cari BlackHole di semua folder Model
         for _, child in ipairs(workspace:GetChildren()) do
@@ -1535,6 +1546,14 @@ function FindAndTeleportToTargetEvent()
                 positionOffset = Vector3.new(0,3,0)
             end
         end
+
+    elseif targetName == "Shark Hunt" then
+        targetPart = eventModel:FindFirstChild("FishingBoat")
+        if not targetPart then
+            targetPart = eventModel
+        end
+        positionOffset = Vector3.new(0,6,0)
+        
     elseif targetName == "Worm Hunt" then
         if eventModel:IsA("Model") then
             targetPart = eventModel.PrimaryPart or eventModel:FindFirstChildWhichIsA("BasePart")
@@ -1542,12 +1561,15 @@ function FindAndTeleportToTargetEvent()
             targetPart = eventModel
         end
         positionOffset = Vector3.new(0,5,0)
+        
     elseif targetName == "Admin Event" or targetName == "Black Hole" then
         targetPart = eventModel
         positionOffset = Vector3.new(0,8,0)
+        
     elseif targetName == "Treasure Event" then
         targetPart = eventModel
         positionOffset = Vector3.new(0, 5, 0)
+        
     elseif targetName == "Ghost Shark Hunt" then
         targetPart = eventModel:FindFirstChild("Fishing Boat")
         if not targetPart then targetPart = eventModel end
@@ -1692,6 +1714,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
