@@ -1548,7 +1548,7 @@ function FindAndTeleportToTargetEvent()
         end
 
     elseif targetName == "Shark Hunt" then
-        targetPart = eventModel:FindFirstChild("FishingBoat")
+        targetPart = eventModel:FindFirstChild("Fishing Boat")
         if not targetPart then
             targetPart = eventModel
         end
@@ -1714,6 +1714,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
