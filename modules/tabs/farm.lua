@@ -349,6 +349,20 @@ do
         end
     }))
 
+    -- =============================
+    -- BLATANT SMART THROTTLE
+    -- =============================
+    local BLATANT_THROTTLE = 0.14  -- Delay aman untuk menurunkan recv
+    local lastBlatantAction = 0
+    
+    local function CanBlatant()
+        local now = os.clock()
+        if now - lastBlatantAction >= BLATANT_THROTTLE then
+            lastBlatantAction = now
+            return true
+        end
+        return false
+    end
 
     -- 3. INSTANT FISHING (BLATANT) - V5 (PERFECTION + GHOST UI)
     local blatant = farm:Section({ Title = "Blatant Mode", TextSize = 20, })
@@ -605,24 +619,26 @@ do
                 -- 2. Loop Kita (OPTIMASI: Kurangi overhead dengan pre-check)
                 blatantLoopThread = SafeSpawnThread("blatantLoopThread", function()
                     while blatantInstantState do
-                        -- OPTIMASI: Skip jika remotes tidak ready (prevent spam)
                         if checkFishingRemotes(true) then
-                            runBlatantInstant()
+                            -- Gunakan throttle untuk menurunkan recv
+                            if CanBlatant() then
+                                runBlatantInstant()
+                            end
                         else
-                            task.wait(1)  -- Wait jika remotes tidak ready
+                            task.wait(1)
                             continue
                         end
-                        
-                        -- OPTIMASI: Dynamic interval berdasarkan last catch time
+                
+                        -- Dynamic interval seperti sebelumnya
                         local timeSinceLastCatch = os.clock() - (_G.BlatantLastCatchTime or 0)
                         if timeSinceLastCatch > 5 then
-                            -- Jika lama tidak catch, tambah delay sedikit untuk stabilitas
                             task.wait(loopInterval + 0.2)
                         else
                             task.wait(loopInterval)
                         end
                     end
                 end)
+
 
                 -- 3. Auto Equip (OPTIMASI: Kurangi spam, hanya saat perlu)
                 if blatantEquipThread then 
