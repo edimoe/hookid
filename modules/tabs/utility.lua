@@ -456,7 +456,6 @@ local function ToggleFPSBoost(enabled)
         pcall(function()
             settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
             settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level01
-            settings().Rendering.TextureQuality = Enum.TextureQuality.Low
         end)
 
         if type(setfpscap) == "function" then pcall(function() setfpscap(100) end) end 
@@ -1521,3 +1520,4 @@ utility:Divider()
     end -- Close "other" section do block
     
 end
+
