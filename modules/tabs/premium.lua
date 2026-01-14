@@ -879,6 +879,27 @@ premium:Divider()
     premium:Divider()
 
     -- =================================================================
+    -- AUTO TOTEM (V3 ENGINE + ANTI-FALL STATE ENFORCER)
+    -- =================================================================
+    local totem = premium:Section({ Title = "Auto Spawn Totem", TextSize = 20})
+    local TOTEM_STATUS_PARAGRAPH = totem:Paragraph({ Title = "Status", Content = "Waiting...", Icon = "clock" })
+    
+    local TOTEM_DATA = {
+        ["Luck Totem"]={Id=1,Duration=3601}, 
+        ["Mutation Totem"]={Id=2,Duration=3601}, 
+        ["Shiny Totem"]={Id=3,Duration=3601}
+    }
+    local TOTEM_NAMES = {"Luck Totem", "Mutation Totem", "Shiny Totem"}
+    local selectedTotemName = "Luck Totem"
+    local currentTotemExpiry = 0
+    local AUTO_TOTEM_ACTIVE = false
+    local AUTO_TOTEM_THREAD = nil
+
+    local RunService = game:GetService("RunService")
+
+    local stateConnection = nil -- Untuk loop pemaksa state
+
+    -- =================================================================
     -- HELPER
     -- =================================================================
     local function GetTotemUUID(name)
@@ -890,6 +911,10 @@ premium:Divider()
             end 
         end
     end
+
+    -- Pastikan 2 baris ini ada di bagian atas Tab Premium (di bawah deklarasi Remote lainnya)
+    local RF_EquipOxygenTank = GetRemote(RPath, "RF/EquipOxygenTank")
+    local RF_UnequipOxygenTank = GetRemote(RPath, "RF/UnequipOxygenTank")
 
     -- =================================================================
     -- UI & SINGLE TOGGLE
