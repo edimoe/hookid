@@ -36,7 +36,7 @@ do
     -- =====================================
     
     local LOW_RECV = {
-        actionGap = 0.22,   -- minimal jarak antar FireServer
+        actionGap = 0.18,   -- minimal jarak antar FireServer
         jitter    = 0.06,   -- random kecil biar natural
     }
     
@@ -866,4 +866,5 @@ do
         end
     })
 end
+
 
