@@ -509,9 +509,13 @@ do
         end
     }))
 
+    local blatantCycleActive = false
+
     local function runBlatantInstant()
         if not blatantInstantState then return end
         if not checkFishingRemotes(true) then blatantInstantState = false return end
+        if blatantCycleActive then return end
+        blatantCycleActive = true
 
         task.spawn(function()
             local startTime = os.clock()
@@ -584,6 +588,7 @@ do
             if not success and attempts > maxRetries then
                 warn("[Blatant] Failed after " .. attempts .. " attempts")
             end
+            blatantCycleActive = false
         end)
     end
 
@@ -620,7 +625,7 @@ do
                     while blatantInstantState do
                         if checkFishingRemotes(true) then
                             -- Gunakan throttle untuk menurunkan recv
-                            if CanBlatant() then
+                            if not blatantCycleActive and CanBlatant() then
                                 runBlatantInstant()
                             end
                         else
@@ -839,8 +844,3 @@ do
         end
     })
 end
-
-
-
-
-
