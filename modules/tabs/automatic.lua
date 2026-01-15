@@ -1068,6 +1068,23 @@ end
         end
     })
 
+    -- Pilih jenis batu enchant yang dipakai
+    local EnchantStoneDropdown = enchant:Dropdown({
+        Title = "Select Enchant Stone",
+        Desc = "Pilih batu enchant yang akan digunakan.",
+        Values = {"Enchant Stone", "Evolved Enchant Stone"},
+        Multi = false,
+        AllowNone = false,
+        Value = "Enchant Stone",
+        Callback = function(option)
+            if option == "Evolved Enchant Stone" then
+                selectedEnchantStoneId = EVOLVED_ENCHANT_STONE_ID or 558
+            else
+                selectedEnchantStoneId = ENCHANT_STONE_ID or 10
+            end
+        end
+    })
+
     -- Toggle Auto Enchant
     local autoenc = enchant:Toggle({
         Title = "Enable Auto Enchant",
