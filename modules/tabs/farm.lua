@@ -510,7 +510,7 @@ do
     }))
 
     local blatantActiveCycles = 0
-    local MAX_BLATANT_CONCURRENT = 2 -- naikkan ke 3 jika ingin lebih cepat (recv ikut naik)
+    local MAX_BLATANT_CONCURRENT = 8 -- naikkan ke 3 jika ingin lebih cepat (recv ikut naik)
 
     local function runBlatantInstant()
         if not blatantInstantState then return end
@@ -845,6 +845,7 @@ do
         end
     })
 end
+
 
 
 
