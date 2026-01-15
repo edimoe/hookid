@@ -509,13 +509,14 @@ do
         end
     }))
 
-    local blatantCycleActive = false
+    local blatantActiveCycles = 0
+    local MAX_BLATANT_CONCURRENT = 2 -- naikkan ke 3 jika ingin lebih cepat (recv ikut naik)
 
     local function runBlatantInstant()
         if not blatantInstantState then return end
         if not checkFishingRemotes(true) then blatantInstantState = false return end
-        if blatantCycleActive then return end
-        blatantCycleActive = true
+        if blatantActiveCycles >= MAX_BLATANT_CONCURRENT then return end
+        blatantActiveCycles = blatantActiveCycles + 1
 
         task.spawn(function()
             local startTime = os.clock()
@@ -588,7 +589,7 @@ do
             if not success and attempts > maxRetries then
                 warn("[Blatant] Failed after " .. attempts .. " attempts")
             end
-            blatantCycleActive = false
+            blatantActiveCycles = math.max(0, blatantActiveCycles - 1)
         end)
     end
 
@@ -625,7 +626,7 @@ do
                     while blatantInstantState do
                         if checkFishingRemotes(true) then
                             -- Gunakan throttle untuk menurunkan recv
-                            if not blatantCycleActive and CanBlatant() then
+                            if blatantActiveCycles < MAX_BLATANT_CONCURRENT and CanBlatant() then
                                 runBlatantInstant()
                             end
                         else
@@ -844,3 +845,8 @@ do
         end
     })
 end
+
+
+
+
+
