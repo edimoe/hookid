@@ -505,6 +505,7 @@ CONSTANTS = {
     
     -- Enchant System
     EnchantStoneID = 10,
+    EvolvedEnchantStoneID = 558,
     EnchantAltarPos = Vector3.new(3236.441, -1302.855, 1397.910),
     EnchantAltarLook = Vector3.new(-0.954, -0.000, 0.299),
     EnchantEquipDelay = 0.2, -- Delay setelah equip rod/stone
@@ -1188,7 +1189,11 @@ for name, id in pairs(ENCHANT_MAPPING) do table.insert(ENCHANT_NAMES, name) end
 -- selectedEnchantNames = {}
 
 ENCHANT_STONE_ID = CONSTANTS.EnchantStoneID
+EVOLVED_ENCHANT_STONE_ID = CONSTANTS.EvolvedEnchantStoneID
 _G.HookID_EnchantStoneUUIDs = {}
+
+-- Selected enchant stone (default: normal Enchant Stone)
+selectedEnchantStoneId = ENCHANT_STONE_ID
 
 function GetEnchantNameFromId(id)
     id = tonumber(id)
@@ -1305,11 +1310,20 @@ function GetFirstStoneUUID()
 
     local GeneralItems = inventoryData.Items or {}
     for _, item in ipairs(GeneralItems) do
-        if tonumber(item.Id) == ENCHANT_STONE_ID and item.UUID and item.Type ~= "Fishing Rods" and item.Type ~= "Bait" then
+        local targetStoneId = selectedEnchantStoneId or ENCHANT_STONE_ID
+        if tonumber(item.Id) == targetStoneId and item.UUID and item.Type ~= "Fishing Rods" and item.Type ~= "Bait" then
             return item.UUID
         end
     end
     return nil
+end
+
+function GetSelectedEnchantStoneName()
+    local targetStoneId = selectedEnchantStoneId or ENCHANT_STONE_ID
+    if targetStoneId == EVOLVED_ENCHANT_STONE_ID then
+        return "Evolved Enchant Stone"
+    end
+    return "Enchant Stone"
 end
 
 function UnequipAllEquippedItems()
@@ -1410,7 +1424,8 @@ function RunAutoEnchantLoop(rodUUID)
             
             local enchantStoneUUID = GetFirstStoneUUID() 
             if not enchantStoneUUID then
-                WindUI:Notify({ Title = "Stone Habis!", Content = "No Enchant Stone left in inventory.", Duration = 5, Icon = "stop-circle" })
+                local stoneName = GetSelectedEnchantStoneName and GetSelectedEnchantStoneName() or "Enchant Stone"
+                WindUI:Notify({ Title = "Stone Habis!", Content = "Tidak ada " .. stoneName .. " di inventory.", Duration = 5, Icon = "stop-circle" })
                 break
             end
 
@@ -1678,22 +1693,3 @@ function GetEventGUI()
         return nil
     end
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
