@@ -1611,7 +1611,8 @@ function CensorName(name)
 end
 
 FishingAreas = {
-        ["Christmas Island"] = {Pos = Vector3.new(1138.058, 32.129, 1595.619), Look = Vector3.new(0.050, -0.220, -0.974)},
+        ["Pirate Cove"] = {Pos = Vector3.new(3479.130, 4.192, 3454.337), Look = Vector3.new(-0.921, 0.000, 0.389)},
+        ["Pirate Treasure Room"] = {Pos = Vector3.new(3297.049, -305.896, 3071.873), Look = Vector3.new(0.894, -0.000, -0.448)},
         ["Ancient Jungle"] = {Pos = Vector3.new(1535.639, 3.159, -193.352), Look = Vector3.new(0.505, -0.000, 0.863)},
         ["Arrow Lever"] = {Pos = Vector3.new(898.296, 8.449, -361.856), Look = Vector3.new(0.023, -0.000, 1.000)},
         ["Coral Reef"] = {Pos = Vector3.new(-3207.538, 6.087, 2011.079), Look = Vector3.new(0.973, 0.000, 0.229)},
@@ -1670,6 +1671,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
