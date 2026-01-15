@@ -31,6 +31,32 @@ do
     
     local savedPosition = nil -- Menyimpan {Pos = Vector3, Look = Vector3}
 
+    -- =====================================
+    -- GLOBAL LOW-RECV PATCH (SAFE VERSION)
+    -- =====================================
+    
+    local LOW_RECV = {
+        actionGap = 0.22,   -- minimal jarak antar FireServer
+        jitter    = 0.06,   -- random kecil biar natural
+    }
+    
+    local _lastFire = 0
+    local _clock = os.clock
+    
+    -- Throttle FireServer secara GLOBAL
+    local rawNamecall
+    rawNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        if method == "FireServer" then
+            local now = _clock()
+            if now - _lastFire < LOW_RECV.actionGap then
+                return nil -- BLOCK silently (ini yang nurunin RECV)
+            end
+            _lastFire = now + math.random() * LOW_RECV.jitter
+        end
+        return rawNamecall(self, ...)
+    end)
+
     -----------------------------------------------------------------
     -- ￰ﾟﾛﾠ￯ﾸﾏ FUNGSI HELPER
     -----------------------------------------------------------------
@@ -840,3 +866,4 @@ do
         end
     })
 end
+
