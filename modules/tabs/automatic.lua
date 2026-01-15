@@ -978,7 +978,7 @@ end
         {Name = "Midnight Rod", ID = 80}, {Name = "Steampunk Rod", ID = 6}, {Name = "Chrome Rod", ID = 7}, 
         {Name = "Flourescent Rod", ID = 255}, {Name = "Astral Rod", ID = 5}, {Name = "Ares Rod", ID = 126}, 
         {Name = "Angler Rod", ID = 168}, {Name = "Ghostfin Rod", ID = 169}, {Name = "Element Rod", ID = 257},
-        {Name = "Hazmat Rod", ID = 256}, {Name = "Bamboo Rod", ID = 258}
+        {Name = "Hazmat Rod", ID = 256}, {Name = "Bamboo Rod", ID = 258}, {Name = "Diamond Rod", ID = 559}
     }
 
     local function GetHardcodedRodNames()
@@ -1614,3 +1614,4 @@ end
     }))
     
 end
+
