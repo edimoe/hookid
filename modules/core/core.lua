@@ -1164,11 +1164,18 @@ ENCHANT_MAPPING = {
     ["Leprechaun II"] = 6,
     ["Mutation Hunter I"] = 7,
     ["Mutation Hunter II"] = 14,
+    ["Mutation Hunter III"] = 22,
     ["Perfection"] = 15,
     ["Prismatic I"] = 13,
     ["Reeler I"] = 2,
+    ["Reeler II"] = 21,
+    ["Shark Hunter"] = 16,
+    ["Shark Hunter"] = 20,
+    ["Fairy Hunter I"] = 18,
     ["Stargazer I"] = 8,
+    ["Stargazer II"] = 17,
     ["Stormhunter I"] = 11,
+    ["Stormhunter II"] = 19,
     ["Experienced I"] = 10,
 }
 ENCHANT_NAMES = {} 
@@ -1671,6 +1678,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
