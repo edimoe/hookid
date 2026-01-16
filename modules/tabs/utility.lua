@@ -194,9 +194,10 @@ local anim = Reg("Toggleanim",misc:Toggle({
 }))
 
 -- Tambahkan di bagian atas blok 'utility'
-local VFXControllerModule = require(game:GetService("ReplicatedStorage"):WaitForChild("Controllers").VFXController)
-local originalVFXHandle = VFXControllerModule.Handle
-local originalPlayVFX = VFXControllerModule.PlayVFX.Fire -- Asumsi PlayVFX adalah Signal/Event yang memiliki Fire
+local VFXControllerModule = nil
+local originalVFXHandle = nil
+local originalVFXRenderAtPoint = nil
+local originalVFXRenderInstance = nil
 
 -- Variabel global untuk status VFX
 local isVFXDisabled = false
@@ -210,6 +211,19 @@ local tskin = Reg("toggleskin",misc:Toggle({
         isVFXDisabled = state
 
         if state then
+            if not VFXControllerModule then
+                local ok, mod = pcall(function()
+                    return require(game:GetService("ReplicatedStorage"):WaitForChild("Controllers").VFXController)
+                end)
+                if not ok or not mod then
+                    WindUI:Notify({ Title = "Gagal Hook", Content = "Module VFXController not found.", Duration = 3, Icon = "x" })
+                    return false
+                end
+                VFXControllerModule = mod
+                originalVFXHandle = VFXControllerModule.Handle
+                originalVFXRenderAtPoint = VFXControllerModule.RenderAtPoint
+                originalVFXRenderInstance = VFXControllerModule.RenderInstance
+            end
             -- 1. Blokir fungsi Handle (dipanggil oleh Handle Remote dan PlayVFX Signal)
             VFXControllerModule.Handle = function(...) 
                 -- Memastikan tidak ada kode efek yang berjalan 
@@ -228,32 +242,22 @@ local tskin = Reg("toggleskin",misc:Toggle({
             WindUI:Notify({ Title = "No Skin Effect ON", Duration = 3, Icon = "eye-off" })
         else
             -- 1. Kembalikan fungsi Handle asli
-            VFXControllerModule.Handle = originalVFXHandle
+            if VFXControllerModule and originalVFXHandle then
+                VFXControllerModule.Handle = originalVFXHandle
+                if originalVFXRenderAtPoint then
+                    VFXControllerModule.RenderAtPoint = originalVFXRenderAtPoint
+                end
+                if originalVFXRenderInstance then
+                    VFXControllerModule.RenderInstance = originalVFXRenderInstance
+                end
+            end
         end
     end
 }))
 
 local CutsceneController = nil
-    local OldPlayCutscene = nil
-    local isNoCutsceneActive = false
-
-    -- Mencoba require module CutsceneController dengan aman
-    pcall(function()
-        CutsceneController = require(game:GetService("ReplicatedStorage"):WaitForChild("Controllers"):WaitForChild("CutsceneController"))
-        if CutsceneController and CutsceneController.Play then
-            OldPlayCutscene = CutsceneController.Play
-            
-            -- Overwrite fungsi Play
-            CutsceneController.Play = function(self, ...)
-                if isNoCutsceneActive then
-                    -- Jika aktif, jangan jalankan apa-apa (Skip Cutscene)
-                    return 
-                end
-                -- Jika tidak aktif, jalankan fungsi asli
-                return OldPlayCutscene(self, ...)
-            end
-        end
-    end)
+local OldPlayCutscene = nil
+local isNoCutsceneActive = false
 
     local tcutscen = Reg("tnocut",misc:Toggle({
         Title = "No Cutscene",
@@ -261,10 +265,25 @@ local CutsceneController = nil
         Icon = "film", -- Icon film strip
         Callback = function(state)
             isNoCutsceneActive = state
-            
-            if not CutsceneController then
-                WindUI:Notify({ Title = "Gagal Hook", Content = "Module CutsceneController not found.", Duration = 3, Icon = "x" })
-                return
+            if state and not CutsceneController then
+                local ok, mod = pcall(function()
+                    return require(game:GetService("ReplicatedStorage"):WaitForChild("Controllers"):WaitForChild("CutsceneController"))
+                end)
+                if not ok or not mod then
+                    WindUI:Notify({ Title = "Gagal Hook", Content = "Module CutsceneController not found.", Duration = 3, Icon = "x" })
+                    return false
+                end
+                CutsceneController = mod
+                if CutsceneController and CutsceneController.Play then
+                    OldPlayCutscene = CutsceneController.Play
+                    -- Overwrite fungsi Play
+                    CutsceneController.Play = function(self, ...)
+                        if isNoCutsceneActive then
+                            return
+                        end
+                        return OldPlayCutscene(self, ...)
+                    end
+                end
             end
 
             if state then
