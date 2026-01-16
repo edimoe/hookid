@@ -362,7 +362,12 @@ do
     end
 
     local function GetDiamondProgressSafe()
-        local data = { Header = "Loading...", Q1={Text="...",Done=false}, Q2={Text="...",Done=false}, Q3={Text="...",Done=false}, Q4={Text="...",Done=false}, AllDone=false, BoardFound=false }
+        local data = {
+            Header = "Loading...",
+            Q1={Text="...",Done=false}, Q2={Text="...",Done=false}, Q3={Text="...",Done=false},
+            Q4={Text="...",Done=false}, Q5={Text="...",Done=false}, Q6={Text="...",Done=false},
+            AllDone=false, BoardFound=false
+        }
         local npcFolder = workspace:FindFirstChild("NPC")
         local researcher = npcFolder and npcFolder:FindFirstChild("Diamond Researcher")
         local tracker = researcher and researcher:FindFirstChild("Tracker - Diamond Researcher", true)
@@ -372,12 +377,99 @@ do
             pcall(function()
                 local c = board.Gui.Content
                 data.Header = c.Header.ContentText ~= "" and c.Header.ContentText or c.Header.Text
-                local function proc(lbl) local t = lbl.ContentText~="" and lbl.ContentText or lbl.Text return {Text=t, Done=string.find(t, "100%%")~=nil} end
-                data.Q1 = proc(c.Label1); data.Q2 = proc(c.Label2); data.Q3 = proc(c.Label3); data.Q4 = proc(c.Label4)
-                if data.Q1.Done and data.Q2.Done and data.Q3.Done and data.Q4.Done then data.AllDone = true end
+                local function proc(lbl)
+                    if not lbl then return {Text="...",Done=false} end
+                    local t = lbl.ContentText~="" and lbl.ContentText or lbl.Text
+                    return {Text=t, Done=string.find(t, "100%%")~=nil}
+                end
+                data.Q1 = proc(c.Label1); data.Q2 = proc(c.Label2); data.Q3 = proc(c.Label3)
+                data.Q4 = proc(c.Label4); data.Q5 = proc(c.Label5); data.Q6 = proc(c.Label6)
+                if data.Q1.Done and data.Q2.Done and data.Q3.Done and data.Q4.Done and data.Q5.Done and data.Q6.Done then
+                    data.AllDone = true
+                end
             end)
+            return data
+        end
+
+        -- Fallback: read from Quest UI in PlayerGui (QuestList)
+        EnsureQuestListOpen()
+        local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+        local questRoot = playerGui and playerGui:FindFirstChild("QuestList", true)
+        local rightPanel = questRoot and questRoot:FindFirstChild("Right", true)
+        if rightPanel then
+            local labels = {}
+            for _, d in ipairs(rightPanel:GetDescendants()) do
+                if d:IsA("TextLabel") and d.Name == "Desc" and d.Visible then
+                    table.insert(labels, d)
+                end
+            end
+            
+            if #labels == 0 then
+                for _, d in ipairs(rightPanel:GetDescendants()) do
+                    if d:IsA("TextLabel") and d.Visible then
+                        local t = d.ContentText ~= "" and d.ContentText or d.Text
+                        if t and (t:find("Catch") or t:find("Bring") or t:find("Own") or t:find("PERFECT")) then
+                            table.insert(labels, d)
+                        end
+                    end
+                end
+            end
+            
+            if #labels > 0 then
+                table.sort(labels, function(a, b)
+                    local ao = a.Parent and a.Parent.LayoutOrder or 0
+                    local bo = b.Parent and b.Parent.LayoutOrder or 0
+                    if ao == bo then
+                        return a.AbsolutePosition.Y < b.AbsolutePosition.Y
+                    end
+                    return ao < bo
+                end)
+                
+                local function procFromLabel(lbl)
+                    local t = lbl.ContentText ~= "" and lbl.ContentText or lbl.Text
+                    local done = false
+                    local completed = lbl.Parent and lbl.Parent:FindFirstChild("Completed")
+                    if completed and completed.Visible then
+                        done = true
+                    end
+                    return {Text = t or "...", Done = done}
+                end
+                
+                data.Header = "Diamond Researcher (UI)"
+                data.Q1 = procFromLabel(labels[1])
+                data.Q2 = procFromLabel(labels[2])
+                data.Q3 = procFromLabel(labels[3])
+                data.Q4 = procFromLabel(labels[4])
+                data.Q5 = procFromLabel(labels[5])
+                data.Q6 = procFromLabel(labels[6])
+                data.BoardFound = true
+                if data.Q1.Done and data.Q2.Done and data.Q3.Done and data.Q4.Done and data.Q5.Done and data.Q6.Done then
+                    data.AllDone = true
+                end
+            end
         end
         return data
+    end
+
+    local function EnsureQuestListOpen()
+        local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+        if not playerGui then return end
+        local questRoot = playerGui:FindFirstChild("QuestList", true)
+        if not questRoot then return end
+        
+        if questRoot.Enabled ~= nil then
+            questRoot.Enabled = true
+        end
+        if questRoot.Visible ~= nil then
+            questRoot.Visible = true
+        end
+        
+        local background = questRoot:FindFirstChild("Background", true)
+        if background and background.Visible ~= nil then
+            background.Visible = true
+        end
+        
+        task.wait(0.1)
     end
 
     local function GetDiamondResearcherPart()
@@ -421,7 +513,7 @@ do
 
     local function GetNextDiamondObjectiveText(p)
         if not p then return nil end
-        for _, q in ipairs({p.Q1, p.Q2, p.Q3, p.Q4}) do
+        for _, q in ipairs({p.Q1, p.Q2, p.Q3, p.Q4, p.Q5, p.Q6}) do
             if q and not q.Done then
                 return q.Text
             end
