@@ -365,8 +365,9 @@ do
         local data = { Header = "Loading...", Q1={Text="...",Done=false}, Q2={Text="...",Done=false}, Q3={Text="...",Done=false}, Q4={Text="...",Done=false}, AllDone=false, BoardFound=false }
         local npcFolder = workspace:FindFirstChild("NPC")
         local researcher = npcFolder and npcFolder:FindFirstChild("Diamond Researcher")
-        local board = researcher and researcher:FindFirstChild("Tracker - Diamond Researcher")
-        if board then
+        local tracker = researcher and researcher:FindFirstChild("Tracker - Diamond Researcher", true)
+        local board = tracker and (tracker:FindFirstChild("Board") or tracker)
+        if board and board:FindFirstChild("Gui") and board.Gui:FindFirstChild("Content") then
             data.BoardFound = true
             pcall(function()
                 local c = board.Gui.Content
