@@ -607,6 +607,40 @@ do
         return nil
     end
 
+    local function HasRodById(rodId)
+        local replion = GetPlayerDataReplion()
+        if not replion then return false end
+        local ok, inv = pcall(function() return replion:GetExpect("Inventory") end)
+        if not ok or not inv or not inv["Fishing Rods"] then return false end
+        for _, rod in ipairs(inv["Fishing Rods"]) do
+            if tonumber(rod.Id) == rodId then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function HasSecretFishAt(locationName)
+        local replion = GetPlayerDataReplion()
+        if not replion then return false end
+        local ok, inv = pcall(function() return replion:GetExpect("Inventory") end)
+        if not ok or not inv or not inv.Items then return false end
+        
+        for _, item in ipairs(inv.Items) do
+            local rarity = item.Metadata and item.Metadata.Rarity or "Unknown"
+            if tostring(rarity):upper() == "SECRET" then
+                local location = nil
+                if item.Metadata then
+                    location = item.Metadata.Location or item.Metadata.Zone or item.Metadata.Region or item.Metadata.FishingArea or item.Metadata.Area
+                end
+                if location and tostring(location):lower():find(locationName:lower()) then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
     local function IsLeverUnlocked(artifactName)
         local JUNGLE = workspace:FindFirstChild("JUNGLE INTERACTIONS")
         if not JUNGLE then return false end
@@ -707,6 +741,7 @@ do
 
         local uiData = CreateKaitunUI()
         KAITUN_OVERLAY = uiData.Gui
+        local lastDiamondStage = nil
 
         -- Catch Listener
         if RE_ObtainedNewFishNotification then
@@ -979,94 +1014,123 @@ do
                     end
 
                 elseif step == 7 then
-                    -- === DIAMOND QUEST ===
+                    -- === DIAMOND QUEST (inventory-based) ===
                     uiData.Labels.Status.Text = "Auto Quest: Diamond Rod"
-                    local p = GetDiamondProgressSafe()
                     
-                    if not p.BoardFound then
-                        uiData.Labels.Quest.Text = "Tracker Diamond tidak ditemukan."
-                        task.wait(2)
-                    else
-                        if p.AllDone then
-                            uiData.Labels.Status.Text = "Diamond Selesai! Membeli..."
-                            pcall(function() RF_PurchaseFishingRod:InvokeServer(559) end)
-                            task.wait(1.5)
-                            EquipBestGear()
-                        else
-                            local objectiveText = GetNextDiamondObjectiveText(p) or "Quest: ..."
-                            uiData.Labels.Quest.Text = "Quest: " .. objectiveText
-                            
-                            local text = string.lower(objectiveText)
-                            local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                            
-                            if text:find("coral") then
-                                uiData.Labels.Status.Text = "Diamond Quest: Coral Reefs (SECRET)"
-                                if hrp and (hrp.Position - CORAL_REEF_POS).Magnitude > 15 then
-                                    TeleportToLookAt(CORAL_REEF_POS, CORAL_REEF_LOOK)
-                                    task.wait(0.5)
-                                end
-                                RunQuestInstantFish(CURRENT_KAITUN_DELAY)
-                            
-                            elseif text:find("tropical") or text:find("grove") then
-                                uiData.Labels.Status.Text = "Diamond Quest: Tropical Grove (SECRET)"
-                                if hrp and (hrp.Position - TROPICAL_GROVE_POS).Magnitude > 15 then
-                                    TeleportToLookAt(TROPICAL_GROVE_POS, TROPICAL_GROVE_LOOK)
-                                    task.wait(0.5)
-                                end
-                                RunQuestInstantFish(CURRENT_KAITUN_DELAY)
-                            
-                            elseif text:find("gemstone") or text:find("ruby") then
-                                uiData.Labels.Status.Text = "Diamond Quest: Serahkan Gemstone Ruby"
-                                local rubyUUID = FindInventoryItemById(243, 3)
-                                local npcPart = GetDiamondResearcherPart()
-                                if rubyUUID and npcPart then
-                                    TeleportToLookAt(npcPart.Position, npcPart.CFrame.LookVector)
-                                    task.wait(0.6)
-                                    pcall(function() RE_EquipItem:FireServer(rubyUUID, "Fish") end)
-                                    task.wait(0.3)
-                                    pcall(function() RE_EquipToolFromHotbar:FireServer(2) end)
-                                    task.wait(0.3)
-                                    TryUseDiamondResearcherPrompt()
-                                else
-                                    uiData.Labels.Status.Text = "Cari Gemstone Ruby (mutated)"
-                                    if hrp and (hrp.Position - RUBY_POS).Magnitude > 15 then
-                                        TeleportToLookAt(RUBY_POS, RUBY_LOOK)
-                                        task.wait(0.5)
-                                    end
-                                    RunQuestInstantFish(CURRENT_KAITUN_DELAY)
-                                end
-                            
-                            elseif text:find("lochness") then
-                                uiData.Labels.Status.Text = "Diamond Quest: Serahkan Lochness Monster"
-                                local lochUUID = FindInventoryItemById(228, nil)
-                                local npcPart = GetDiamondResearcherPart()
-                                if lochUUID and npcPart then
-                                    TeleportToLookAt(npcPart.Position, npcPart.CFrame.LookVector)
-                                    task.wait(0.6)
-                                    pcall(function() RE_EquipItem:FireServer(lochUUID, "Fish") end)
-                                    task.wait(0.3)
-                                    pcall(function() RE_EquipToolFromHotbar:FireServer(2) end)
-                                    task.wait(0.3)
-                                    TryUseDiamondResearcherPrompt()
-                                else
-                                    uiData.Labels.Status.Text = "Cari Lochness Monster"
-                                    if hrp and (hrp.Position - LOCHNESS_POS).Magnitude > 15 then
-                                        TeleportToLookAt(LOCHNESS_POS, LOCHNESS_LOOK)
-                                        task.wait(0.5)
-                                    end
-                                    RunQuestInstantFish(CURRENT_KAITUN_DELAY)
-                                end
-                            
-                            elseif text:find("perfect") then
-                                uiData.Labels.Status.Text = "Diamond Quest: PERFECT throw"
-                                -- Instant fish mungkin tidak selalu dihitung sebagai PERFECT, tapi tetap farming.
-                                RunQuestInstantFish(CURRENT_KAITUN_DELAY)
-                            
-                            else
-                                uiData.Labels.Status.Text = "Diamond Quest (manual area)"
-                                RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                    local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    
+                    -- 1) Pastikan sudah punya Element Rod (prasyarat)
+                    if not HasRodById(257) then
+                        local stage = "Need Element Rod"
+                        if lastDiamondStage ~= stage then
+                            lastDiamondStage = stage
+                            print("[Kaitun Diamond] Stage:", stage)
+                        end
+                        uiData.Labels.Quest.Text = "Need: Own an Element Rod"
+                        uiData.Labels.Status.Text = "Diamond Quest: Wait Element Rod"
+                        task.wait(1)
+                    
+                    -- 2) Secret fish Coral Reefs
+                    elseif not HasSecretFishAt("Coral Reefs") then
+                        local stage = "Secret Coral Reefs"
+                        if lastDiamondStage ~= stage then
+                            lastDiamondStage = stage
+                            print("[Kaitun Diamond] Stage:", stage)
+                        end
+                        uiData.Labels.Quest.Text = "Catch a SECRET fish at Coral Reefs"
+                        uiData.Labels.Status.Text = "Diamond Quest: Coral Reefs (SECRET)"
+                        if hrp and (hrp.Position - CORAL_REEF_POS).Magnitude > 15 then
+                            TeleportToLookAt(CORAL_REEF_POS, CORAL_REEF_LOOK)
+                            task.wait(0.5)
+                        end
+                        RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                    
+                    -- 3) Secret fish Tropical Grove
+                    elseif not HasSecretFishAt("Tropical Grove") then
+                        local stage = "Secret Tropical Grove"
+                        if lastDiamondStage ~= stage then
+                            lastDiamondStage = stage
+                            print("[Kaitun Diamond] Stage:", stage)
+                        end
+                        uiData.Labels.Quest.Text = "Catch a SECRET fish at Tropical Grove"
+                        uiData.Labels.Status.Text = "Diamond Quest: Tropical Grove (SECRET)"
+                        if hrp and (hrp.Position - TROPICAL_GROVE_POS).Magnitude > 15 then
+                            TeleportToLookAt(TROPICAL_GROVE_POS, TROPICAL_GROVE_LOOK)
+                            task.wait(0.5)
+                        end
+                        RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                    
+                    -- 4) Mutated Gemstone Ruby
+                    elseif not FindInventoryItemById(243, 3) then
+                        local stage = "Find Gemstone Ruby (mutated)"
+                        if lastDiamondStage ~= stage then
+                            lastDiamondStage = stage
+                            print("[Kaitun Diamond] Stage:", stage)
+                        end
+                        uiData.Labels.Quest.Text = "Bring Lary a mutated Gemstone Ruby"
+                        uiData.Labels.Status.Text = "Cari Gemstone Ruby (mutated)"
+                        if hrp and (hrp.Position - RUBY_POS).Magnitude > 15 then
+                            TeleportToLookAt(RUBY_POS, RUBY_LOOK)
+                            task.wait(0.5)
+                        end
+                        RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                    
+                    -- 5) Lochness Monster
+                    elseif not FindInventoryItemById(228, nil) then
+                        local stage = "Find Lochness Monster"
+                        if lastDiamondStage ~= stage then
+                            lastDiamondStage = stage
+                            print("[Kaitun Diamond] Stage:", stage)
+                        end
+                        uiData.Labels.Quest.Text = "Bring Lary a Lochness Monster"
+                        uiData.Labels.Status.Text = "Cari Lochness Monster"
+                        if hrp and (hrp.Position - LOCHNESS_POS).Magnitude > 15 then
+                            TeleportToLookAt(LOCHNESS_POS, LOCHNESS_LOOK)
+                            task.wait(0.5)
+                        end
+                        RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                    
+                    -- 6) Turn-in items if we have them
+                    elseif FindInventoryItemById(243, 3) or FindInventoryItemById(228, nil) then
+                        local stage = "Turn-in to Lary"
+                        if lastDiamondStage ~= stage then
+                            lastDiamondStage = stage
+                            print("[Kaitun Diamond] Stage:", stage)
+                        end
+                        uiData.Labels.Quest.Text = "Turn-in items to Lary"
+                        uiData.Labels.Status.Text = "Diamond Quest: Turn-in"
+                        local npcPart = GetDiamondResearcherPart()
+                        if npcPart then
+                            TeleportToLookAt(npcPart.Position, npcPart.CFrame.LookVector)
+                            task.wait(0.6)
+                            local rubyUUID = FindInventoryItemById(243, 3)
+                            if rubyUUID then
+                                pcall(function() RE_EquipItem:FireServer(rubyUUID, "Fish") end)
+                                task.wait(0.3)
+                                pcall(function() RE_EquipToolFromHotbar:FireServer(2) end)
+                                task.wait(0.3)
+                                TryUseDiamondResearcherPrompt()
+                            end
+                            local lochUUID = FindInventoryItemById(228, nil)
+                            if lochUUID then
+                                pcall(function() RE_EquipItem:FireServer(lochUUID, "Fish") end)
+                                task.wait(0.3)
+                                pcall(function() RE_EquipToolFromHotbar:FireServer(2) end)
+                                task.wait(0.3)
+                                TryUseDiamondResearcherPrompt()
                             end
                         end
+                    
+                    -- 7) Perfect throw 1,000 fish
+                    else
+                        local stage = "Perfect throw 1000"
+                        if lastDiamondStage ~= stage then
+                            lastDiamondStage = stage
+                            print("[Kaitun Diamond] Stage:", stage)
+                        end
+                        uiData.Labels.Quest.Text = "Catch 1,000 fish while using PERFECT! throw"
+                        uiData.Labels.Status.Text = "Diamond Quest: PERFECT throw"
+                        RunQuestInstantFish(CURRENT_KAITUN_DELAY)
                     end
                 
                 elseif step == 8 then
