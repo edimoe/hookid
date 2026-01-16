@@ -367,10 +367,10 @@ do
         local questRoot = playerGui:FindFirstChild("QuestList", true)
         if not questRoot then return end
         
-        if questRoot.Enabled ~= nil then
+        -- QuestList bisa berupa Folder/Frame (bukan ScreenGui), jadi cek properti aman.
+        if questRoot:IsA("ScreenGui") and questRoot.Enabled ~= nil then
             questRoot.Enabled = true
-        end
-        if questRoot.Visible ~= nil then
+        elseif questRoot.Visible ~= nil then
             questRoot.Visible = true
         end
         
