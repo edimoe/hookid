@@ -344,7 +344,7 @@ do
     end
 
     -- 3. INSTANT FISHING (BLATANT) - V5 (PERFECTION + GHOST UI)
-    local blatant = farm:Section({ Title = "Blatant Mode", TextSize = 20, })
+    local blatant = farm:Section({ Title = "Blatant Fishing", TextSize = 20, })
 
     local completeDelay = CONSTANTS.BlatantCompleteDelay
     local cancelDelay = CONSTANTS.BlatantCancelDelay
@@ -568,7 +568,7 @@ do
     end
 
     local togblat = Reg("blatantt",blatant:Toggle({
-        Title = "Instant Fishing (Blatant)",
+        Title = "Blatant Instant Fishing",
         Value = false,
         Callback = function(state)
             if not checkFishingRemotes() then return end
@@ -663,4 +663,5 @@ do
     }))
 
 end
+
 
