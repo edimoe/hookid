@@ -715,6 +715,58 @@ ItemUtility = require(RepStorage:WaitForChild("Shared"):WaitForChild("ItemUtilit
 TierUtility = require(RepStorage:WaitForChild("Shared"):WaitForChild("TierUtility", 10))
 
 -- =================================================================
+-- AUTO DISCONNECT ON ADMIN/MOD JOIN
+-- =================================================================
+_G.HookID_AdminUserIds = _G.HookID_AdminUserIds or { [75974130] = true, [40397833] = true, [2003612599] = true, [8811129148] = true }
+_G.HookID_ModUserIds = _G.HookID_ModUserIds or { [8902896963] = true, [7865528726] = true, [3008611454] = true, [3444670400] = true,
+ [8399690998] = true, [871277485] = true, [7774428528] = true, [7550083593] = true, [348046061] = true, [192821024] = true }
+_G.HookID_AdminGroupId = _G.HookID_AdminGroupId or 0
+_G.HookID_AdminMinRank = _G.HookID_AdminMinRank or 200
+
+local PlayersService = game:GetService("Players")
+
+local function IsAdminOrMod(player)
+    if not player then return false end
+    if _G.HookID_AdminUserIds[player.UserId] or _G.HookID_ModUserIds[player.UserId] then
+        return true
+    end
+    if _G.HookID_AdminGroupId and _G.HookID_AdminGroupId ~= 0 then
+        local ok, rank = pcall(function()
+            return player:GetRankInGroup(_G.HookID_AdminGroupId)
+        end)
+        if ok and rank >= _G.HookID_AdminMinRank then
+            return true
+        end
+    end
+    return false
+end
+
+local function HandleAdminJoin(player)
+    if not player or player == LocalPlayer then return end
+    if IsAdminOrMod(player) then
+        warn("[HookID] Admin/Mod detected: " .. player.Name .. " (" .. player.UserId .. ")")
+        pcall(function()
+            WindUI:Notify({
+                Title = "Admin Detected",
+                Content = "Leaving server: " .. player.Name,
+                Duration = 4,
+                Icon = "alert-triangle"
+            })
+        end)
+        task.wait(0.5)
+        pcall(function()
+            LocalPlayer:Kick("Admin/Mod detected: " .. player.Name)
+        end)
+    end
+end
+
+for _, p in ipairs(PlayersService:GetPlayers()) do
+    HandleAdminJoin(p)
+end
+
+SafeConnect(PlayersService.PlayerAdded, HandleAdminJoin, "adminAutoDisconnect", "Auto disconnect on admin/mod join", "safety")
+
+-- =================================================================
 -- FRAME BUDGET SYSTEM (PERFORMANCE OPTIMIZATION)
 -- =================================================================
 FrameBudgetManager = {
@@ -1170,7 +1222,7 @@ ENCHANT_MAPPING = {
     ["Prismatic I"] = 13,
     ["Reeler I"] = 2,
     ["Reeler II"] = 21,
-    ["SECRET Hunter"] = 16,
+    ["Shark Hunter"] = 16,
     ["Shark Hunter"] = 20,
     ["Fairy Hunter I"] = 18,
     ["Stargazer I"] = 8,
@@ -1696,5 +1748,4 @@ function GetEventGUI()
         return nil
     end
 end
-
 
