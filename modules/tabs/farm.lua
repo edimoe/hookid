@@ -344,7 +344,7 @@ do
     end
 
     -- 3. INSTANT FISHING (BLATANT) - V5 (PERFECTION + GHOST UI)
-    local blatant = farm:Section({ Title = "Blatant Fishing", TextSize = 20, })
+    local blatant = farm:Section({ Title = "Blatant Mode", TextSize = 20, })
 
     local completeDelay = CONSTANTS.BlatantCompleteDelay
     local cancelDelay = CONSTANTS.BlatantCancelDelay
@@ -568,7 +568,7 @@ do
     end
 
     local togblat = Reg("blatantt",blatant:Toggle({
-        Title = "Blatant Instant Fishing",
+        Title = "Instant Fishing (Blatant)",
         Value = false,
         Callback = function(state)
             if not checkFishingRemotes() then return end
@@ -625,16 +625,27 @@ do
                     blatantEquipThread = nil
                 end
                 blatantEquipThread = SafeSpawnThread("blatantEquipThread", function()
+                    local missingCount = 0
+                    local lastEquipAttempt = 0
+                    local equipCooldown = 0.4
                     while blatantInstantState do
                         -- OPTIMASI: Cek apakah rod sudah equipped sebelum spam
                         local character = LocalPlayer.Character
                         if character then
                             local tool = character:FindFirstChildOfClass("Tool")
-                            if not tool or not tool.Name:find("Rod") then
-                                pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
+                            if tool and tool.Name:find("Rod") then
+                                missingCount = 0
+                            else
+                                missingCount = missingCount + 1
                             end
                         else
+                            missingCount = missingCount + 1
+                        end
+                        
+                        if missingCount >= 3 and (os.clock() - lastEquipAttempt) >= equipCooldown then
+                            lastEquipAttempt = os.clock()
                             pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
+                            missingCount = 0
                         end
                         task.wait(CONSTANTS.BlatantEquipDelay)
                     end
@@ -663,5 +674,3 @@ do
     }))
 
 end
-
-
