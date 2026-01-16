@@ -453,11 +453,23 @@ do
                     return ao < bo
                 end)
                 
+                local function NormalizeQuestText(text)
+                    if not text then return "" end
+                    -- Strip rich text tags and trim whitespace
+                    local cleaned = text:gsub("<[^>]+>", "")
+                    cleaned = cleaned:gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+                    return cleaned
+                end
+
                 local function procFromLabel(lbl)
-                    local t = lbl.ContentText ~= "" and lbl.ContentText or lbl.Text
+                    local rawText = lbl.ContentText ~= "" and lbl.ContentText or lbl.Text
+                    local t = NormalizeQuestText(rawText)
                     local done = false
                     local parent = lbl.Parent
                     local completed = parent and parent:FindFirstChild("Completed")
+                    if not completed and parent and parent.Parent then
+                        completed = parent.Parent:FindFirstChild("Completed")
+                    end
                     if completed and completed.Visible then
                         done = true
                     end
@@ -465,6 +477,9 @@ do
                     -- Fallback: cek progress bar jika ada
                     if not done and parent then
                         local barFrame = parent:FindFirstChild("BarFrame")
+                        if not barFrame and parent.Parent then
+                            barFrame = parent.Parent:FindFirstChild("BarFrame")
+                        end
                         if barFrame then
                             for _, child in ipairs(barFrame:GetChildren()) do
                                 if child:IsA("Frame") and child.Size and child.Size.X and child.Size.X.Scale then
@@ -511,8 +526,11 @@ do
                 
                 local hasElement = HasElementRod()
                 for _, q in ipairs({data.Q1, data.Q2, data.Q3, data.Q4, data.Q5, data.Q6}) do
-                    if q and q.Text and string.find(string.lower(q.Text), "own an element rod") then
-                        q.Done = hasElement
+                    if q and q.Text then
+                        local qt = NormalizeQuestText(q.Text):lower()
+                        if qt:find("own an element rod") then
+                            q.Done = hasElement
+                        end
                     end
                 end
                 
