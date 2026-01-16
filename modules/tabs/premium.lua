@@ -56,6 +56,15 @@ do
     local SACRED_TEMPLE_LOOK = Vector3.new(-0.990, -0.000, 0.143)
     local SECOND_ALTAR_POS = Vector3.new(1479.587, 128.295, -604.224)
     local SECOND_ALTAR_LOOK = Vector3.new(-0.298, 0.000, -0.955)
+    local CORAL_REEF_POS = Vector3.new(-3207.538, 6.087, 2011.079)
+    local CORAL_REEF_LOOK = Vector3.new(0.973, 0.000, 0.229)
+    -- NOTE: Tropical Grove location assumed to be Tropical Island.
+    local TROPICAL_GROVE_POS = Vector3.new(-2162.920, 2.825, 3638.445)
+    local TROPICAL_GROVE_LOOK = Vector3.new(0.381, -0.000, 0.925)
+    local RUBY_POS = Vector3.new(-3598.440, -281.274, -1645.855)
+    local RUBY_LOOK = Vector3.new(-0.065, 0.000, -0.998)
+    local LOCHNESS_POS = Vector3.new(-668.732, 3.000, 681.580)
+    local LOCHNESS_LOOK = Vector3.new(0.889, -0.000, 0.458)
 
     -- [VARIABLES]
     local KAITUN_ACTIVE = false
@@ -129,7 +138,7 @@ do
     
     local ROD_DELAYS = {
         [79]=4.6, [76]=4.35, [85]=4.2, [77]=4.35, [78]=3.85, [4]=3.5, [80]=2.7,
-        [6]=2.3, [7]=2.2, [255]=2.2,[256]=1.9, [5]=1.85, [126]=1.7, [168]=1.6, [169]=1.2, [257]=1
+        [6]=2.3, [7]=2.2, [255]=2.2,[256]=1.9, [5]=1.85, [126]=1.7, [168]=1.6, [169]=1.2, [257]=1, [559]=1
     }
     local DEFAULT_ROD_DELAY = 3.85
     local CURRENT_KAITUN_DELAY = DEFAULT_ROD_DELAY
@@ -193,6 +202,7 @@ do
                 local p = GetRodPriceByID(r.Id)
                 if tonumber(r.Id) == 169 then p = 99999999 end
                 if tonumber(r.Id) == 257 then p = 999999999 end
+                if tonumber(r.Id) == 559 then p = 9999999999 end
                 
                 if p > bestRodPrice then bestRodPrice = p; bestRodUUID = r.UUID; bestRodId = tonumber(r.Id) end
             end
@@ -239,6 +249,7 @@ do
                 local p = GetRodPriceByID(r.Id)
                 if tonumber(r.Id) == 169 then p = 99999999 end
                 if tonumber(r.Id) == 257 then p = 999999999 end
+                if tonumber(r.Id) == 559 then p = 9999999999 end
                 if p > hRP then 
                     hRP = p
                     local data = ItemUtility:GetItemData(r.Id)
@@ -348,6 +359,73 @@ do
             end)
         end
         return data
+    end
+
+    local function GetDiamondProgressSafe()
+        local data = { Header = "Loading...", Q1={Text="...",Done=false}, Q2={Text="...",Done=false}, Q3={Text="...",Done=false}, Q4={Text="...",Done=false}, AllDone=false, BoardFound=false }
+        local npcFolder = workspace:FindFirstChild("NPC")
+        local researcher = npcFolder and npcFolder:FindFirstChild("Diamond Researcher")
+        local board = researcher and researcher:FindFirstChild("Tracker - Diamond Researcher")
+        if board then
+            data.BoardFound = true
+            pcall(function()
+                local c = board.Gui.Content
+                data.Header = c.Header.ContentText ~= "" and c.Header.ContentText or c.Header.Text
+                local function proc(lbl) local t = lbl.ContentText~="" and lbl.ContentText or lbl.Text return {Text=t, Done=string.find(t, "100%%")~=nil} end
+                data.Q1 = proc(c.Label1); data.Q2 = proc(c.Label2); data.Q3 = proc(c.Label3); data.Q4 = proc(c.Label4)
+                if data.Q1.Done and data.Q2.Done and data.Q3.Done and data.Q4.Done then data.AllDone = true end
+            end)
+        end
+        return data
+    end
+
+    local function GetDiamondResearcherPart()
+        local npcFolder = workspace:FindFirstChild("NPC")
+        local researcher = npcFolder and npcFolder:FindFirstChild("Diamond Researcher")
+        if not researcher then return nil end
+        return researcher:FindFirstChild("Head") or researcher:FindFirstChildWhichIsA("BasePart")
+    end
+
+    local function TryUseDiamondResearcherPrompt()
+        local npcFolder = workspace:FindFirstChild("NPC")
+        local researcher = npcFolder and npcFolder:FindFirstChild("Diamond Researcher")
+        if not researcher then return false end
+        local ok = false
+        for _, desc in ipairs(researcher:GetDescendants()) do
+            if desc:IsA("ProximityPrompt") then
+                if fireproximityprompt then
+                    pcall(function() fireproximityprompt(desc) end)
+                end
+                ok = true
+            end
+        end
+        return ok
+    end
+
+    local function FindInventoryItemById(itemId, variantId)
+        local replion = GetPlayerDataReplion()
+        if not replion then return nil end
+        local success, inventoryData = pcall(function() return replion:GetExpect("Inventory") end)
+        if not success or not inventoryData or not inventoryData.Items then return nil end
+        
+        for _, item in ipairs(inventoryData.Items) do
+            if tonumber(item.Id) == itemId then
+                if variantId == nil or (item.Metadata and tonumber(item.Metadata.VariantId) == variantId) then
+                    return item.UUID
+                end
+            end
+        end
+        return nil
+    end
+
+    local function GetNextDiamondObjectiveText(p)
+        if not p then return nil end
+        for _, q in ipairs({p.Q1, p.Q2, p.Q3, p.Q4}) do
+            if q and not q.Done then
+                return q.Text
+            end
+        end
+        return nil
     end
 
     local function IsLeverUnlocked(artifactName)
@@ -530,8 +608,16 @@ do
                     step = 5 
                 
                 -- Step 6: Element Quest
-                else 
+                elseif bRodPrice < 999999999 then 
                     step = 6 
+                
+                -- Step 7: Diamond Quest
+                elseif bRodPrice < 9999999999 then
+                    step = 7
+                
+                -- Step 8: Completed
+                else 
+                    step = 8 
                 end 
 
                 -- Bait Strategy (Prioritas Bait tetap jalan)
@@ -714,6 +800,97 @@ do
                     end
 
                 elseif step == 7 then
+                    -- === DIAMOND QUEST ===
+                    uiData.Labels.Status.Text = "Auto Quest: Diamond Rod"
+                    local p = GetDiamondProgressSafe()
+                    
+                    if not p.BoardFound then
+                        uiData.Labels.Quest.Text = "Tracker Diamond tidak ditemukan."
+                        task.wait(2)
+                    else
+                        if p.AllDone then
+                            uiData.Labels.Status.Text = "Diamond Selesai! Membeli..."
+                            pcall(function() RF_PurchaseFishingRod:InvokeServer(559) end)
+                            task.wait(1.5)
+                            EquipBestGear()
+                        else
+                            local objectiveText = GetNextDiamondObjectiveText(p) or "Quest: ..."
+                            uiData.Labels.Quest.Text = "Quest: " .. objectiveText
+                            
+                            local text = string.lower(objectiveText)
+                            local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                            
+                            if text:find("coral") then
+                                uiData.Labels.Status.Text = "Diamond Quest: Coral Reefs (SECRET)"
+                                if hrp and (hrp.Position - CORAL_REEF_POS).Magnitude > 15 then
+                                    TeleportToLookAt(CORAL_REEF_POS, CORAL_REEF_LOOK)
+                                    task.wait(0.5)
+                                end
+                                RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                            
+                            elseif text:find("tropical") or text:find("grove") then
+                                uiData.Labels.Status.Text = "Diamond Quest: Tropical Grove (SECRET)"
+                                if hrp and (hrp.Position - TROPICAL_GROVE_POS).Magnitude > 15 then
+                                    TeleportToLookAt(TROPICAL_GROVE_POS, TROPICAL_GROVE_LOOK)
+                                    task.wait(0.5)
+                                end
+                                RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                            
+                            elseif text:find("gemstone") or text:find("ruby") then
+                                uiData.Labels.Status.Text = "Diamond Quest: Serahkan Gemstone Ruby"
+                                local rubyUUID = FindInventoryItemById(243, 3)
+                                local npcPart = GetDiamondResearcherPart()
+                                if rubyUUID and npcPart then
+                                    TeleportToLookAt(npcPart.Position, npcPart.CFrame.LookVector)
+                                    task.wait(0.6)
+                                    pcall(function() RE_EquipItem:FireServer(rubyUUID, "Fish") end)
+                                    task.wait(0.3)
+                                    pcall(function() RE_EquipToolFromHotbar:FireServer(2) end)
+                                    task.wait(0.3)
+                                    TryUseDiamondResearcherPrompt()
+                                else
+                                    uiData.Labels.Status.Text = "Cari Gemstone Ruby (mutated)"
+                                    if hrp and (hrp.Position - RUBY_POS).Magnitude > 15 then
+                                        TeleportToLookAt(RUBY_POS, RUBY_LOOK)
+                                        task.wait(0.5)
+                                    end
+                                    RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                                end
+                            
+                            elseif text:find("lochness") then
+                                uiData.Labels.Status.Text = "Diamond Quest: Serahkan Lochness Monster"
+                                local lochUUID = FindInventoryItemById(228, nil)
+                                local npcPart = GetDiamondResearcherPart()
+                                if lochUUID and npcPart then
+                                    TeleportToLookAt(npcPart.Position, npcPart.CFrame.LookVector)
+                                    task.wait(0.6)
+                                    pcall(function() RE_EquipItem:FireServer(lochUUID, "Fish") end)
+                                    task.wait(0.3)
+                                    pcall(function() RE_EquipToolFromHotbar:FireServer(2) end)
+                                    task.wait(0.3)
+                                    TryUseDiamondResearcherPrompt()
+                                else
+                                    uiData.Labels.Status.Text = "Cari Lochness Monster"
+                                    if hrp and (hrp.Position - LOCHNESS_POS).Magnitude > 15 then
+                                        TeleportToLookAt(LOCHNESS_POS, LOCHNESS_LOOK)
+                                        task.wait(0.5)
+                                    end
+                                    RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                                end
+                            
+                            elseif text:find("perfect") then
+                                uiData.Labels.Status.Text = "Diamond Quest: PERFECT throw"
+                                -- Instant fish mungkin tidak selalu dihitung sebagai PERFECT, tapi tetap farming.
+                                RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                            
+                            else
+                                uiData.Labels.Status.Text = "Diamond Quest (manual area)"
+                                RunQuestInstantFish(CURRENT_KAITUN_DELAY)
+                            end
+                        end
+                    end
+                
+                elseif step == 8 then
                     uiData.Labels.Status.Text = "KAITUN COMPLETED!"
                     uiData.Labels.Quest.Text = "All Rods Unlocked."
                     task.wait(5)
