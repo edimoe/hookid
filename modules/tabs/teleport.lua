@@ -124,6 +124,41 @@ do
         end
     })
 
+    local savepos = telearea:Button({
+        Title = "Save Current Position",
+        Icon = "map-pin",
+        Callback = function()
+            local hrp = GetHRP()
+            if hrp then
+                SavedFishingPosition = {
+                    Pos = hrp.Position,
+                    Look = hrp.CFrame.LookVector
+                }
+                FishingAreas["Custom: Saved"] = SavedFishingPosition
+                WindUI:Notify({
+                    Title = "Position Saved!",
+                    Duration = 3,
+                    Icon = "save",
+                })
+            else
+                WindUI:Notify({ Title = "Failed to Save", Duration = 3, Icon = "x", })
+            end
+        end
+    })
+
+    local teletosave = telearea:Button({
+        Title = "Teleport to SAVED Pos",
+        Icon = "navigation",
+        Callback = function()
+            if not SavedFishingPosition then
+                WindUI:Notify({ Title = "Teleport Failed", Content = "No position saved.", Duration = 3, Icon = "alert-triangle", })
+                return
+            end
+            
+            TeleportToLookAt(SavedFishingPosition.Pos, SavedFishingPosition.Look)
+        end
+    })
+
     teleport:Divider()
 
     local televent = teleport:Section({
