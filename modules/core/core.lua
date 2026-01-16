@@ -1663,6 +1663,9 @@ FishingAreas = {
         table.insert(AreaNames, name)
     end
 
+-- Saved position for manual teleport (set from Teleport tab)
+SavedFishingPosition = nil
+
 -- =================================================================
 -- EVENT GUI HELPER
 -- =================================================================
@@ -1693,3 +1696,4 @@ function GetEventGUI()
         return nil
     end
 end
+
