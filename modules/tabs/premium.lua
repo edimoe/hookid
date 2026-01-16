@@ -425,30 +425,44 @@ do
         local content = background and background:FindFirstChild("Content")
         local rightPanel = content and content:FindFirstChild("Right")
         if rightPanel then
-            local labels = {}
-            for _, d in ipairs(rightPanel:GetDescendants()) do
-                if d:IsA("TextLabel") and d.Name == "Desc" and d.Visible then
-                    table.insert(labels, d)
-                end
-            end
-            
-            if #labels == 0 then
-                for _, d in ipairs(rightPanel:GetDescendants()) do
-                    if d:IsA("TextLabel") and d.Visible then
-                        local t = d.ContentText ~= "" and d.ContentText or d.Text
-                        if t and (t:find("Catch") or t:find("Bring") or t:find("Own") or t:find("PERFECT")) then
-                            table.insert(labels, d)
+            local entries = {}
+            local list = rightPanel:FindFirstChild("List")
+            if list then
+                for _, child in ipairs(list:GetChildren()) do
+                    if child:IsA("Frame") and child.Visible then
+                        local desc = child:FindFirstChild("Desc")
+                        if desc and desc:IsA("TextLabel") and desc.Visible then
+                            table.insert(entries, {template = child, desc = desc})
                         end
                     end
                 end
             end
             
-            if #labels > 0 then
-                table.sort(labels, function(a, b)
-                    local ao = a.Parent and a.Parent.LayoutOrder or 0
-                    local bo = b.Parent and b.Parent.LayoutOrder or 0
+            if #entries == 0 then
+                for _, d in ipairs(rightPanel:GetDescendants()) do
+                    if d:IsA("TextLabel") and d.Name == "Desc" and d.Visible then
+                        table.insert(entries, {template = d.Parent, desc = d})
+                    end
+                end
+            end
+            
+            if #entries == 0 then
+                for _, d in ipairs(rightPanel:GetDescendants()) do
+                    if d:IsA("TextLabel") and d.Visible then
+                        local t = d.ContentText ~= "" and d.ContentText or d.Text
+                        if t and (t:find("Catch") or t:find("Bring") or t:find("Own") or t:find("PERFECT")) then
+                            table.insert(entries, {template = d.Parent, desc = d})
+                        end
+                    end
+                end
+            end
+            
+            if #entries > 0 then
+                table.sort(entries, function(a, b)
+                    local ao = a.template and a.template.LayoutOrder or 0
+                    local bo = b.template and b.template.LayoutOrder or 0
                     if ao == bo then
-                        return a.AbsolutePosition.Y < b.AbsolutePosition.Y
+                        return a.desc.AbsolutePosition.Y < b.desc.AbsolutePosition.Y
                     end
                     return ao < bo
                 end)
@@ -461,11 +475,12 @@ do
                     return cleaned
                 end
 
-                local function procFromLabel(lbl)
+                local function procFromLabel(entry)
+                    local lbl = entry.desc
                     local rawText = lbl.ContentText ~= "" and lbl.ContentText or lbl.Text
                     local t = NormalizeQuestText(rawText)
                     local done = false
-                    local parent = lbl.Parent
+                    local parent = entry.template or lbl.Parent
                     local completed = parent and parent:FindFirstChild("Completed")
                     if not completed and parent and parent.Parent then
                         completed = parent.Parent:FindFirstChild("Completed")
@@ -502,12 +517,12 @@ do
                 else
                     data.Header = "Diamond Researcher (UI)"
                 end
-                data.Q1 = procFromLabel(labels[1])
-                data.Q2 = procFromLabel(labels[2])
-                data.Q3 = procFromLabel(labels[3])
-                data.Q4 = procFromLabel(labels[4])
-                data.Q5 = procFromLabel(labels[5])
-                data.Q6 = procFromLabel(labels[6])
+                data.Q1 = procFromLabel(entries[1])
+                data.Q2 = procFromLabel(entries[2])
+                data.Q3 = procFromLabel(entries[3])
+                data.Q4 = procFromLabel(entries[4])
+                data.Q5 = procFromLabel(entries[5])
+                data.Q6 = procFromLabel(entries[6])
                 data.BoardFound = true
                 
                 -- Override: "Own an Element Rod" berdasarkan inventory
@@ -528,7 +543,7 @@ do
                 for _, q in ipairs({data.Q1, data.Q2, data.Q3, data.Q4, data.Q5, data.Q6}) do
                     if q and q.Text then
                         local qt = NormalizeQuestText(q.Text):lower()
-                        if qt:find("own an element rod") then
+                        if qt:find("own an element rod") or (qt:find("element") and qt:find("rod")) then
                             q.Done = hasElement
                         end
                     end
