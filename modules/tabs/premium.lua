@@ -392,7 +392,10 @@ do
         local npcFolder = workspace:FindFirstChild("NPC")
         local researcher = npcFolder and npcFolder:FindFirstChild("Diamond Researcher")
         local tracker = researcher and researcher:FindFirstChild("Tracker - Diamond Researcher", true)
-        local board = tracker and (tracker:FindFirstChild("Board") or tracker)
+        local board = nil
+        if tracker and tracker.FindFirstChild then
+            board = tracker:FindFirstChild("Board") or tracker
+        end
         if board and board:FindFirstChild("Gui") and board.Gui:FindFirstChild("Content") then
             data.BoardFound = true
             pcall(function()
@@ -413,7 +416,9 @@ do
         end
 
         -- Fallback: read from Quest UI in PlayerGui (QuestList)
-        EnsureQuestListOpen()
+        if EnsureQuestListOpen then
+            EnsureQuestListOpen()
+        end
         local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
         local questRoot = playerGui and playerGui:FindFirstChild("QuestList", true)
         local rightPanel = questRoot and questRoot:FindFirstChild("Right", true)
