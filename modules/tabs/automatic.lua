@@ -1176,7 +1176,8 @@ end
         return options, uuidMap
     end
 
-    local secretFishOptions, secretFishUUIDMap = GetSecretFishOptions()
+    local secretFishOptions = {"(Click Refresh)"}
+    local secretFishUUIDMap = {}
 
     -- --- HELPER: CEK ENCHANT ID 2 (KHUSUS SECOND ENCHANT) ---
     local function CheckIfSecondEnchantReached(rodUUID)
@@ -1408,6 +1409,12 @@ end
         Callback = function(state)
             makeStoneState = state
             if state then
+                if #secretFishOptions <= 1 then
+                    local newOptions, newMap = GetSecretFishOptions()
+                    secretFishOptions = newOptions
+                    secretFishUUIDMap = newMap
+                    pcall(function() SecretFishDropdown:Refresh(newOptions) end)
+                end
                 if #selectedSecretFishUUIDs == 0 then
                     WindUI:Notify({ Title = "Error", Content = "Select at least 1 secret fish.", Duration = 3, Icon = "alert-triangle" })
                     return false
