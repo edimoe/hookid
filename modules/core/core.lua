@@ -1170,7 +1170,7 @@ ENCHANT_MAPPING = {
     ["Prismatic I"] = 13,
     ["Reeler I"] = 2,
     ["Reeler II"] = 21,
-    ["Shark Hunter"] = 16,
+    ["SECRET Hunter"] = 16,
     ["Shark Hunter"] = 20,
     ["Fairy Hunter I"] = 18,
     ["Stargazer I"] = 8,
@@ -1696,4 +1696,5 @@ function GetEventGUI()
         return nil
     end
 end
+
 
