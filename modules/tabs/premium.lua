@@ -456,10 +456,27 @@ do
                 local function procFromLabel(lbl)
                     local t = lbl.ContentText ~= "" and lbl.ContentText or lbl.Text
                     local done = false
-                    local completed = lbl.Parent and lbl.Parent:FindFirstChild("Completed")
+                    local parent = lbl.Parent
+                    local completed = parent and parent:FindFirstChild("Completed")
                     if completed and completed.Visible then
                         done = true
                     end
+                    
+                    -- Fallback: cek progress bar jika ada
+                    if not done and parent then
+                        local barFrame = parent:FindFirstChild("BarFrame")
+                        if barFrame then
+                            for _, child in ipairs(barFrame:GetChildren()) do
+                                if child:IsA("Frame") and child.Size and child.Size.X and child.Size.X.Scale then
+                                    if child.Size.X.Scale >= 0.99 then
+                                        done = true
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    
                     return {Text = t or "...", Done = done}
                 end
                 
@@ -477,6 +494,28 @@ do
                 data.Q5 = procFromLabel(labels[5])
                 data.Q6 = procFromLabel(labels[6])
                 data.BoardFound = true
+                
+                -- Override: "Own an Element Rod" berdasarkan inventory
+                local function HasElementRod()
+                    local replion = GetPlayerDataReplion()
+                    if not replion then return false end
+                    local ok, inv = pcall(function() return replion:GetExpect("Inventory") end)
+                    if not ok or not inv or not inv["Fishing Rods"] then return false end
+                    for _, rod in ipairs(inv["Fishing Rods"]) do
+                        if tonumber(rod.Id) == 257 then
+                            return true
+                        end
+                    end
+                    return false
+                end
+                
+                local hasElement = HasElementRod()
+                for _, q in ipairs({data.Q1, data.Q2, data.Q3, data.Q4, data.Q5, data.Q6}) do
+                    if q and q.Text and string.find(string.lower(q.Text), "own an element rod") then
+                        q.Done = hasElement
+                    end
+                end
+                
                 if data.Q1.Done and data.Q2.Done and data.Q3.Done and data.Q4.Done and data.Q5.Done and data.Q6.Done then
                     data.AllDone = true
                 end
