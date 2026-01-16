@@ -4,6 +4,8 @@
 ]]
 
 local MODULE_BASE_URL = "https://raw.githubusercontent.com/edimoe/hookid/refs/heads/main/"
+local MODULE_LOAD_DELAY = 0.25
+local MODULE_PREP_YIELD = 0.03
 
 -- Module loading order (core must be loaded first)
 local MODULE_LOAD_ORDER = {
@@ -30,6 +32,7 @@ local function LoadModule(moduleInfo)
         local content = game:HttpGet(url, true)
         local func = loadstring(content)
         if func then
+            task.wait(MODULE_PREP_YIELD)
             func()
             print(string.format("[Loader] ✓ Loaded module: %s", moduleInfo.name))
             return true
@@ -73,7 +76,7 @@ task.spawn(function()
         else
             failedCount = failedCount + 1
         end
-        task.wait(0.12) -- larger delay to reduce load spikes
+        task.wait(MODULE_LOAD_DELAY) -- larger delay to reduce load spikes
     end
 end)
 
