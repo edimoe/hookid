@@ -361,6 +361,27 @@ do
         return data
     end
 
+    local function EnsureQuestListOpen()
+        local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+        if not playerGui then return end
+        local questRoot = playerGui:FindFirstChild("QuestList", true)
+        if not questRoot then return end
+        
+        if questRoot.Enabled ~= nil then
+            questRoot.Enabled = true
+        end
+        if questRoot.Visible ~= nil then
+            questRoot.Visible = true
+        end
+        
+        local background = questRoot:FindFirstChild("Background", true)
+        if background and background.Visible ~= nil then
+            background.Visible = true
+        end
+        
+        task.wait(0.1)
+    end
+
     local function GetDiamondProgressSafe()
         local data = {
             Header = "Loading...",
@@ -451,26 +472,6 @@ do
         return data
     end
 
-    local function EnsureQuestListOpen()
-        local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
-        if not playerGui then return end
-        local questRoot = playerGui:FindFirstChild("QuestList", true)
-        if not questRoot then return end
-        
-        if questRoot.Enabled ~= nil then
-            questRoot.Enabled = true
-        end
-        if questRoot.Visible ~= nil then
-            questRoot.Visible = true
-        end
-        
-        local background = questRoot:FindFirstChild("Background", true)
-        if background and background.Visible ~= nil then
-            background.Visible = true
-        end
-        
-        task.wait(0.1)
-    end
 
     local function GetDiamondResearcherPart()
         local npcFolder = workspace:FindFirstChild("NPC")
