@@ -211,7 +211,7 @@ do
     -- ￰ﾟﾎﾣ AUTO FISHING SECTION UI
     -- =================================================================
     local autofish = farm:Section({
-        Title = "Auto Fishing",
+        Title = "Auto Fishing Legit",
         TextSize = 20,
         FontWeight = Enum.FontWeight.SemiBold,
     })
@@ -255,10 +255,18 @@ do
 
     farm:Divider()
     
+    -- =================================================================
+    -- ￰ﾟﾔﾹ NORMAL INSTANT SECTION
+    -- =================================================================
+    local normalSection = farm:Section({
+        Title = "Normal Instant",
+        TextSize = 20,
+    })
+    
     -- Variabel & Slider Delay
     local normalCompleteDelay = CONSTANTS.NormalCompleteDelayDefault
 
-    NormalInstantSlider = Reg("normalslid",autofish:Slider({
+    NormalInstantSlider = Reg("normalslid",normalSection:Slider({
         Title = "Normal Complete Delay",
         Step = 0.05,
         Value = { Min = CONSTANTS.NormalCompleteDelayMin, Max = CONSTANTS.NormalCompleteDelayMax, Default = normalCompleteDelay },
@@ -281,7 +289,7 @@ do
         pcall(function() RF_CancelFishingInputs:InvokeServer() end)
     end
 
-    local normalins = Reg("tognorm",autofish:Toggle({
+    local normalins = Reg("tognorm",normalSection:Toggle({
         Title = "Normal Instant Fish",
         Value = false,
         Callback = function(state)
