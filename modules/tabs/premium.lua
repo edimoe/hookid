@@ -633,7 +633,8 @@ do
                 if item.Metadata then
                     location = item.Metadata.Location or item.Metadata.Zone or item.Metadata.Region or item.Metadata.FishingArea or item.Metadata.Area
                 end
-                if location and tostring(location):lower():find(locationName:lower()) then
+                local caughtBy = item.Metadata and (item.Metadata.CaughtBy or item.Metadata.CaughtUserId or item.Metadata.OwnerUserId)
+                if location and tostring(location):lower():find(locationName:lower()) and tonumber(caughtBy) == tonumber(game.Players.LocalPlayer.UserId) then
                     return true
                 end
             end
@@ -1069,6 +1070,10 @@ do
                         end
                         uiData.Labels.Quest.Text = "Bring Lary a mutated Gemstone Ruby"
                         uiData.Labels.Status.Text = "Cari Gemstone Ruby (mutated)"
+                        local rubyUUID = FindInventoryItemById(243, 3)
+                        if rubyUUID and RE_FavoriteItem then
+                            pcall(function() RE_FavoriteItem:FireServer(rubyUUID) end)
+                        end
                         if hrp and (hrp.Position - RUBY_POS).Magnitude > 15 then
                             TeleportToLookAt(RUBY_POS, RUBY_LOOK)
                             task.wait(0.5)
