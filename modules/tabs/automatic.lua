@@ -218,11 +218,14 @@ do
     local CurrentCountDisplay = sellall:Paragraph({ Title = "Current Fish Count: 0", Icon = "package" })
     task.spawn(function() 
         while true do 
-            if CurrentCountDisplay and GetPlayerDataReplion() then 
+            local shouldUpdate = autoSellState or autoSellMethod == "Count"
+            if shouldUpdate and CurrentCountDisplay and GetPlayerDataReplion() then 
                 local count = GetFishCount() 
                 CurrentCountDisplay:SetTitle("Current Fish Count: " .. tostring(count)) 
-            end 
-            task.wait(1) 
+                task.wait(1) 
+            else 
+                task.wait(5) 
+            end
         end 
     end)
 
@@ -283,7 +286,14 @@ do
         return itemNames
     end
     
-    local allItemNames = getAutoFavoriteItemOptions()
+    local cachedItemNames = nil
+    local function GetCachedItemNames()
+        if cachedItemNames then return cachedItemNames end
+        cachedItemNames = getAutoFavoriteItemOptions()
+        return cachedItemNames
+    end
+    
+    local allItemNames = {"(Loading...)"}
     
     -- FUNGSI HELPER: Mendapatkan semua item yang memenuhi kriteria (DIFORWARD KE FAVORITE)
     -- GANTI FUNGSI LAMA 'GetItemsToFavorite' DENGAN YANG INI:
@@ -458,10 +468,15 @@ end
 
     local ItemNameDropdown = Reg("dtem",favsec:Dropdown({
         Title = "by Item Name",
-        Values = allItemNames, -- Menggunakan daftar nama item universal
+        Values = allItemNames, -- akan di-refresh setelah load
         Multi = true, AllowNone = true, Value = false,
         Callback = function(values) selectedItemNames = values or {} end -- Multi select untuk nama
     }))
+
+    task.spawn(function()
+        local names = GetCachedItemNames()
+        pcall(function() ItemNameDropdown:Refresh(names) end)
+    end)
 
     local MutationDropdown = Reg("dmut",favsec:Dropdown({
         Title = "by Mutation",
@@ -614,41 +629,10 @@ end
     
     automatic:Divider()
     
-    -- 1. Item Auto-Populate Dropdown (SINGLE SELECT)
-    local function getTradeableItemOptions()
-        local itemNames = {}
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local itemsContainer = ReplicatedStorage:FindFirstChild("Items")
-
-        if not itemsContainer then
-            return {"(Kontainer 'Items' di ReplicatedStorage Tidak Ditemukan)"}
-        end
-
-        for _, itemObject in ipairs(itemsContainer:GetChildren()) do
-            local itemName = itemObject.Name
-            
-            if type(itemName) == "string" and #itemName >= 3 then
-                local prefix = itemName:sub(1, 3)
-                
-                if prefix ~= "!!!" then
-                    table.insert(itemNames, itemName)
-                end
-            end
-        end
-
-        table.sort(itemNames)
-        
-        if #itemNames == 0 then
-            return {"(Kontainer 'Items' Kosong atau Semua Item '!!!')"}
-        end
-        
-        return itemNames
-    end
-
     local ItemNameDropdown
     ItemNameDropdown = trade:Dropdown({
         Title = "Filter Item Name",
-        Values = getTradeableItemOptions(),
+        Values = {"(Loading...)"},
         Value = false,
         Multi = false,
         AllowNone = true,
@@ -656,6 +640,11 @@ end
             selectedTradeItemName = name or nil -- Set ke nil jika "None"
         end
     })
+
+    task.spawn(function()
+        local names = GetCachedItemNames()
+        pcall(function() ItemNameDropdown:Refresh(names) end)
+    end)
 
     -- 2. Filter Rarity Dropdown (SINGLE SELECT)
     local raretrade = trade:Dropdown({
