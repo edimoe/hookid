@@ -489,11 +489,14 @@ do
         end
     }))
 
+    local blatantActionActive = false
+
     local function runBlatantInstant()
         if not blatantInstantState then return end
         if not checkFishingRemotes(true) then blatantInstantState = false return end
 
         task.spawn(function()
+            blatantActionActive = true
             local startTime = os.clock()
             local timestamp = os.time() + os.clock()
             local success = false
@@ -564,6 +567,7 @@ do
             if not success and attempts > maxRetries then
                 warn("[Blatant] Failed after " .. attempts .. " attempts")
             end
+            blatantActionActive = false
         end)
     end
 
@@ -627,8 +631,12 @@ do
                 blatantEquipThread = SafeSpawnThread("blatantEquipThread", function()
                     local missingCount = 0
                     local lastEquipAttempt = 0
-                    local equipCooldown = 0.4
+                    local equipCooldown = 0.6
                     while blatantInstantState do
+                        if blatantActionActive then
+                            task.wait(CONSTANTS.BlatantEquipDelay)
+                            continue
+                        end
                         -- OPTIMASI: Cek apakah rod sudah equipped sebelum spam
                         local character = LocalPlayer.Character
                         if character then
@@ -642,7 +650,7 @@ do
                             missingCount = missingCount + 1
                         end
                         
-                        if missingCount >= 3 and (os.clock() - lastEquipAttempt) >= equipCooldown then
+                        if missingCount >= 5 and (os.clock() - lastEquipAttempt) >= equipCooldown then
                             lastEquipAttempt = os.clock()
                             pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
                             missingCount = 0
@@ -674,3 +682,4 @@ do
     }))
 
 end
+
