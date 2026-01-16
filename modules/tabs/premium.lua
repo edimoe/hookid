@@ -420,8 +420,10 @@ do
             EnsureQuestListOpen()
         end
         local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
-        local questRoot = playerGui and playerGui:FindFirstChild("QuestList", true)
-        local rightPanel = questRoot and questRoot:FindFirstChild("Right", true)
+        local questRoot = playerGui and playerGui:FindFirstChild("QuestList")
+        local background = questRoot and questRoot:FindFirstChild("Background")
+        local content = background and background:FindFirstChild("Content")
+        local rightPanel = content and content:FindFirstChild("Right")
         if rightPanel then
             local labels = {}
             for _, d in ipairs(rightPanel:GetDescendants()) do
@@ -461,7 +463,13 @@ do
                     return {Text = t or "...", Done = done}
                 end
                 
-                data.Header = "Diamond Researcher (UI)"
+                local leftList = content and content:FindFirstChild("Left") and content.Left:FindFirstChild("List")
+                local leftItem = leftList and leftList:GetChildren()[11]
+                if leftItem and leftItem:FindFirstChild("Desc") then
+                    data.Header = leftItem.Desc.Text
+                else
+                    data.Header = "Diamond Researcher (UI)"
+                end
                 data.Q1 = procFromLabel(labels[1])
                 data.Q2 = procFromLabel(labels[2])
                 data.Q3 = procFromLabel(labels[3])
