@@ -16,7 +16,6 @@ local MODULE_LOAD_ORDER = {
     { name = "teleport", path = "modules/tabs/teleport.lua", required = false },
     { name = "shop", path = "modules/tabs/shop.lua", required = false },
     { name = "premium", path = "modules/tabs/premium.lua", required = false },
-    { name = "quest", path = "modules/tabs/quest.lua", required = false },
     { name = "event", path = "modules/tabs/event.lua", required = false },
     { name = "utility", path = "modules/tabs/utility.lua", required = false },
     { name = "webhook", path = "modules/tabs/webhook.lua", required = false },
@@ -65,18 +64,18 @@ local failedCount = 0
 LoadModule(MODULE_LOAD_ORDER[1])
 loadedCount = loadedCount + 1
 
--- Load remaining modules in coroutine to prevent freeze
-for i = 2, #MODULE_LOAD_ORDER do
-    local moduleInfo = MODULE_LOAD_ORDER[i]
-    task.spawn(function()
+-- Load remaining modules sequentially in a single coroutine to reduce spikes
+task.spawn(function()
+    for i = 2, #MODULE_LOAD_ORDER do
+        local moduleInfo = MODULE_LOAD_ORDER[i]
         if LoadModule(moduleInfo) then
             loadedCount = loadedCount + 1
         else
             failedCount = failedCount + 1
         end
-    end)
-    task.wait(0.04) -- small delay between modules
-end
+        task.wait(0.12) -- larger delay to reduce load spikes
+    end
+end)
 
 -- Optional: wait a short moment to let coroutines start
 task.wait(0.1)
