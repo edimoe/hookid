@@ -588,10 +588,7 @@ do
                 blatantLoopThread = SafeSpawnThread("blatantLoopThread", function()
                     while blatantInstantState do
                         if checkFishingRemotes(true) then
-                            -- Gunakan throttle untuk menurunkan recv
-                            if CanBlatant() then
-                                runBlatantInstant()
-                            end
+                            runBlatantInstant()
                         else
                             task.wait(1)
                             continue
@@ -667,5 +664,4 @@ do
     }))
 
 end
-
 
