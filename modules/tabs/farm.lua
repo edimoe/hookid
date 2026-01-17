@@ -328,6 +328,21 @@ do
         end
     }))
 
+    -- =============================
+    -- BLATANT SMART THROTTLE
+    -- =============================
+    local BLATANT_THROTTLE = 0.7  -- Delay aman untuk menurunkan recv
+    local lastBlatantAction = 0
+    
+    local function CanBlatant()
+        local now = os.clock()
+        if now - lastBlatantAction >= BLATANT_THROTTLE then
+            lastBlatantAction = now
+            return true
+        end
+        return false
+    end
+
     -- 3. INSTANT FISHING (BLATANT) - V5 (PERFECTION + GHOST UI)
     local blatant = farm:Section({ Title = "Blatant Mode", TextSize = 20, })
 
@@ -336,7 +351,6 @@ do
     local loopInterval = CONSTANTS.BlatantLoopInterval
     local maxRetries = CONSTANTS.BlatantMaxRetries
     local retryDelay = CONSTANTS.BlatantRetryDelay
-    local blatantMaxConcurrent = 5
     
     _G.HookID_BlatantActive = false
     _G.BlatantLastCatchTime = 0  -- Track last successful catch
@@ -475,91 +489,85 @@ do
         end
     }))
 
-    local blatantActionCount = 0
+    local blatantActionActive = false
 
     local function runBlatantInstant()
         if not blatantInstantState then return end
-        if blatantActionCount >= blatantMaxConcurrent then return end
         if not checkFishingRemotes(true) then blatantInstantState = false return end
 
-        blatantActionCount = blatantActionCount + 1
         task.spawn(function()
-            local ok, err = pcall(function()
-                local startTime = os.clock()
-                local timestamp = os.time() + os.clock()
-                local success = false
-                local attempts = 0
+            blatantActionActive = true
+            local startTime = os.clock()
+            local timestamp = os.time() + os.clock()
+            local success = false
+            local attempts = 0
+            
+            -- OPTIMASI: Koordinat yang lebih akurat (dari normal instant yang lebih stabil)
+            local minigameX = -139.630452165
+            local minigameY = 0.99647927980797
+            
+            -- Retry loop untuk no miss
+            while attempts <= maxRetries and not success do
+                attempts = attempts + 1
                 
-                -- OPTIMASI: Koordinat yang lebih akurat (dari normal instant yang lebih stabil)
-                local minigameX = -139.630452165
-                local minigameY = 0.99647927980797
+                -- 1. Charge rod dengan timestamp presisi
+                local chargeSuccess = pcall(function() 
+                    RF_ChargeFishingRod:InvokeServer(timestamp) 
+                end)
                 
-                -- Retry loop untuk no miss
-                while attempts <= maxRetries and not success do
-                    attempts = attempts + 1
-                    
-                    -- 1. Charge rod dengan timestamp presisi
-                    local chargeSuccess = pcall(function() 
-                        RF_ChargeFishingRod:InvokeServer(timestamp) 
-                    end)
-                    
-                    if not chargeSuccess then
-                        task.wait(0.1)
-                        continue
-                    end
-                    
-                    -- OPTIMASI: Kurangi delay antara charge dan cast (dari 0.001 ke 0.0005)
-                    task.wait(0.0005)
-                    
-                    -- 2. Start minigame dengan koordinat optimal
-                    local castSuccess = pcall(function() 
-                        RF_RequestFishingMinigameStarted:InvokeServer(minigameX, minigameY) 
-                    end)
-                    
-                    if not castSuccess then
-                        task.wait(retryDelay)
-                        continue
-                    end
-                    
-                    -- 3. Calculate precise wait time
-                    local elapsed = os.clock() - startTime
-                    local completeWaitTime = completeDelay - elapsed
-                    
-                    -- OPTIMASI: Pastikan wait time tidak negatif dan cukup
-                    if completeWaitTime > 0.1 then
-                        task.wait(completeWaitTime)
-                    else
-                        task.wait(0.1)  -- Minimum safety delay
-                    end
-                    
-                    -- 4. Complete fishing
-                    local completeSuccess = pcall(function() 
-                        RE_FishingCompleted:FireServer() 
-                    end)
-                    
-                    if completeSuccess then
-                        success = true
-                        _G.BlatantLastCatchTime = os.clock()
-                    else
-                        -- Retry jika complete gagal
-                        task.wait(retryDelay)
-                        continue
-                    end
-                    
-                    -- 5. Cancel inputs (non-blocking)
-                    task.wait(cancelDelay)
-                    pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+                if not chargeSuccess then
+                    task.wait(0.1)
+                    continue
                 end
                 
-                -- Log jika semua retry gagal (untuk debugging)
-                if not success and attempts > maxRetries then
-                    warn("[Blatant] Failed after " .. attempts .. " attempts")
+                -- OPTIMASI: Kurangi delay antara charge dan cast (dari 0.001 ke 0.0005)
+                task.wait(0.0005)
+                
+                -- 2. Start minigame dengan koordinat optimal
+                local castSuccess = pcall(function() 
+                    RF_RequestFishingMinigameStarted:InvokeServer(minigameX, minigameY) 
+                end)
+                
+                if not castSuccess then
+                    task.wait(retryDelay)
+                    continue
                 end
-            end)
-            if not ok then
-                warn("[Blatant] runBlatantInstant error: " .. tostring(err))
+                
+                -- 3. Calculate precise wait time
+                local elapsed = os.clock() - startTime
+                local completeWaitTime = completeDelay - elapsed
+                
+                -- OPTIMASI: Pastikan wait time tidak negatif dan cukup
+                if completeWaitTime > 0.1 then
+                    task.wait(completeWaitTime)
+                else
+                    task.wait(0.1)  -- Minimum safety delay
+                end
+                
+                -- 4. Complete fishing
+                local completeSuccess = pcall(function() 
+                    RE_FishingCompleted:FireServer() 
+                end)
+                
+                if completeSuccess then
+                    success = true
+                    _G.BlatantLastCatchTime = os.clock()
+                else
+                    -- Retry jika complete gagal
+                    task.wait(retryDelay)
+                    continue
+                end
+                
+                -- 5. Cancel inputs (non-blocking)
+                task.wait(cancelDelay)
+                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
             end
-            blatantActionCount = math.max(0, blatantActionCount - 1)
+            
+            -- Log jika semua retry gagal (untuk debugging)
+            if not success and attempts > maxRetries then
+                warn("[Blatant] Failed after " .. attempts .. " attempts")
+            end
+            blatantActionActive = false
         end)
     end
 
@@ -594,11 +602,10 @@ do
                 -- 2. Loop Kita (OPTIMASI: Kurangi overhead dengan pre-check)
                 blatantLoopThread = SafeSpawnThread("blatantLoopThread", function()
                     while blatantInstantState do
-                        if type(checkFishingRemotes) == "function" and checkFishingRemotes(true) then
-                            if type(runBlatantInstant) == "function" then
+                        if checkFishingRemotes(true) then
+                            -- Gunakan throttle untuk menurunkan recv
+                            if CanBlatant() then
                                 runBlatantInstant()
-                            else
-                                task.wait(0.1)
                             end
                         else
                             task.wait(1)
@@ -626,7 +633,7 @@ do
                     local lastEquipAttempt = 0
                     local equipCooldown = 0.6
                     while blatantInstantState do
-                        if blatantActionCount > 0 then
+                        if blatantActionActive then
                             task.wait(CONSTANTS.BlatantEquipDelay)
                             continue
                         end
