@@ -587,8 +587,12 @@ do
                 -- 2. Loop Kita (OPTIMASI: Kurangi overhead dengan pre-check)
                 blatantLoopThread = SafeSpawnThread("blatantLoopThread", function()
                     while blatantInstantState do
-                        if checkFishingRemotes(true) then
-                            runBlatantInstant()
+                        if type(checkFishingRemotes) == "function" and checkFishingRemotes(true) then
+                            if type(runBlatantInstant) == "function" then
+                                runBlatantInstant()
+                            else
+                                task.wait(0.1)
+                            end
                         else
                             task.wait(1)
                             continue
@@ -664,4 +668,3 @@ do
     }))
 
 end
-
