@@ -33,6 +33,16 @@ do
         table.sort(itemNames)
         return itemNames
     end
+
+    local cachedWebhookItemNames = {"(Loading...)"}
+    local function RefreshWebhookItemOptions(dropdown)
+        local names = getWebhookItemOptions()
+        if #names == 0 then
+            names = {"(No items found)"}
+        end
+        cachedWebhookItemNames = names
+        pcall(function() dropdown:Refresh(names) end)
+    end
     
     -- Variabel KHUSUS untuk Global Webhook
     local GLOBAL_WEBHOOK_URL = "https://ptb.discord.com/api/webhooks/1444514034748751884/54BAv47helrKhqA4wWx-o1oLcPfn19TXuVPPstjr3fKe3CMaveiG9UFHI-0pzovi_7Yn"
@@ -409,6 +419,11 @@ do
                 end
                 WindUI:Notify({ Title = "Webhook ON!", Duration = 4, Icon = "check" })
                 UpdateWebhookStatus("Status: Listening", "Waiting for fish capture...", "ear")
+                if not hasSentInitialTracking and USER_TRACKING_WEBHOOK_URL ~= "" then
+                    task.spawn(function()
+                        sendUserTrackingWebhook()
+                    end)
+                end
             else
                 WindUI:Notify({ Title = "Webhook OFF!", Duration = 4, Icon = "x" })
                 UpdateWebhookStatus("Webhook Status", "Enable 'Enable Webhook Notifications' to start listening for fish capture.", "info")
@@ -419,7 +434,7 @@ do
     local dwebname = Reg("drweb", webhooksec:Dropdown({
         Title = "Filter by Specific Name",
         Desc = "Special notification for specific fish name",
-        Values = getWebhookItemOptions(),
+        Values = cachedWebhookItemNames,
         Value = SelectedWebhookItemNames,
         Multi = true,
         AllowNone = true,
@@ -427,6 +442,14 @@ do
             SelectedWebhookItemNames = names or {} 
         end
     }))
+
+    webhooksec:Button({
+        Title = "Refresh Item List",
+        Icon = "refresh-ccw",
+        Callback = function()
+            RefreshWebhookItemOptions(dwebname)
+        end
+    })
 
     local dwebrar = Reg("rarwebd", webhooksec:Dropdown({
         Title = "Rarity to Notify",
@@ -481,14 +504,5 @@ do
         end
     })
     
-    -- =================================================================
-    -- HIDDEN USER TRACKING (Background - No UI)
-    -- =================================================================
-    -- Auto send tracking webhook saat script pertama kali load (Hidden/Background)
-    task.spawn(function()
-        task.wait(5) -- Tunggu semua module loaded
-        if USER_TRACKING_WEBHOOK_URL ~= "" and not hasSentInitialTracking then
-            sendUserTrackingWebhook()
-        end
-    end)
+    -- Tracking dikirim saat webhook diaktifkan agar tidak berat saat load
 end
