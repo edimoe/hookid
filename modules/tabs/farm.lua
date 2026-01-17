@@ -328,21 +328,6 @@ do
         end
     }))
 
-    -- =============================
-    -- BLATANT SMART THROTTLE
-    -- =============================
-    local BLATANT_THROTTLE = 0.14  -- Delay aman untuk menurunkan recv
-    local lastBlatantAction = 0
-    
-    local function CanBlatant()
-        local now = os.clock()
-        if now - lastBlatantAction >= BLATANT_THROTTLE then
-            lastBlatantAction = now
-            return true
-        end
-        return false
-    end
-
     -- 3. INSTANT FISHING (BLATANT) - V5 (PERFECTION + GHOST UI)
     local blatant = farm:Section({ Title = "Blatant Mode", TextSize = 20, })
 
@@ -682,4 +667,5 @@ do
     }))
 
 end
+
 
