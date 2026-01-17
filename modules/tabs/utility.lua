@@ -7,7 +7,7 @@ local utility = Window:Tab({
 
 utility:Divider()
 
-local misc = utility:Section({ Title = "Misc. Area", TextSize = 20})
+local misc = utility:Section({ Title = "Misc", TextSize = 20})
 
 local RF_UpdateFishingRadar = GetRemote(RPath, "RF/UpdateFishingRadar")
 
@@ -513,12 +513,178 @@ end
         end
     }))
 
+
+    -- 3. TOGGLE FLY MODE
+    local flyConnection = nil
+    local flyConnectionId = "flyConnection"
+    local isFlying = false
+    local flySpeed = 60
+    local bodyGyro, bodyVel
+    local flytog = Reg("flym",misc:Toggle({
+        Title = "Fly Mode",
+        Value = false,
+        Callback = function(state)
+            local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+            local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+            local humanoid = character:WaitForChild("Humanoid")
+
+            if state then
+                WindUI:Notify({ Title = "Fly Mode ON!", Duration = 3, Icon = "check", })
+                isFlying = true
+
+                bodyGyro = Instance.new("BodyGyro")
+                bodyGyro.P = 9e4
+                bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+                bodyGyro.CFrame = humanoidRootPart.CFrame
+                bodyGyro.Parent = humanoidRootPart
+
+                bodyVel = Instance.new("BodyVelocity")
+                bodyVel.Velocity = Vector3.zero
+                bodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+                bodyVel.Parent = humanoidRootPart
+
+                local cam = workspace.CurrentCamera
+                local moveDir = Vector3.zero
+                local jumpPressed = false
+
+                UserInputService.JumpRequest:Connect(function()
+                    if isFlying then jumpPressed = true task.delay(0.2, function() jumpPressed = false end) end
+                end)
+
+                flyConnection = SafeConnect(
+                    game:GetService("RunService").RenderStepped,
+                    function()
+                        if not isFlying or not humanoidRootPart or not bodyGyro or not bodyVel then return end
+                        
+                        bodyGyro.CFrame = cam.CFrame
+                        moveDir = humanoid.MoveDirection
+
+                        if jumpPressed then
+                            moveDir = moveDir + Vector3.new(0, 1, 0)
+                        elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+                            moveDir = moveDir - Vector3.new(0, 1, 0)
+                        end
+
+                        if moveDir.Magnitude > 0 then moveDir = moveDir.Unit * flySpeed end
+
+                        bodyVel.Velocity = moveDir
+                    end,
+                    flyConnectionId,
+                    "Fly Mode",
+                    "ability"
+                )
+
+            else
+                WindUI:Notify({ Title = "Fly Mode OFF!", Duration = 3, Icon = "x", })
+                isFlying = false
+
+                SafeDisconnect(flyConnectionId)
+                flyConnection = nil
+                if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+                if bodyVel then bodyVel:Destroy() bodyVel = nil end
+            end
+        end
+    }))
+
+   -- 4. TOGGLE WALK ON WATER (FIXED: RESPAWN SUPPORT)
+    local walkOnWaterConnection = nil
+    local walkOnWaterConnectionId = "walkOnWaterConnection"
+    local isWalkOnWater = false
+    local waterPlatform = nil
+    
+    local walkon = Reg("walkwat",misc:Toggle({
+        Title = "Walk on Water",
+        Value = false,
+        Callback = function(state)
+            -- Kita tidak mendefinisikan 'character' di sini agar logic tidak stuck di char lama
+
+            if state then
+                WindUI:Notify({ Title = "Walk on Water ON!", Duration = 3, Icon = "check", })
+                isWalkOnWater = true
+                
+                -- Buat Platform jika belum ada
+                if not waterPlatform then
+                    waterPlatform = Instance.new("Part")
+                    waterPlatform.Name = "WaterPlatform"
+                    waterPlatform.Anchored = true
+                    waterPlatform.CanCollide = true
+                    waterPlatform.Transparency = 1 
+                    waterPlatform.Size = Vector3.new(15, 1, 15) -- Ukuran diperbesar sedikit
+                    waterPlatform.Parent = workspace
+                end
+
+                -- Pastikan koneksi lama mati dulu sebelum buat baru
+                SafeDisconnect(walkOnWaterConnectionId)
+
+                walkOnWaterConnection = SafeConnect(
+                    game:GetService("RunService").RenderStepped,
+                    function()
+                        -- [FIX] Ambil Karakter TERBARU setiap frame
+                    local character = LocalPlayer.Character
+                    if not isWalkOnWater or not character then return end
+                    
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    if not hrp then return end
+
+                    -- Pastikan platform masih ada (kadang kehapus oleh game cleanup)
+                    if not waterPlatform or not waterPlatform.Parent then
+                        waterPlatform = Instance.new("Part")
+                        waterPlatform.Name = "WaterPlatform"
+                        waterPlatform.Anchored = true
+                        waterPlatform.CanCollide = true
+                        waterPlatform.Transparency = 1 
+                        waterPlatform.Size = Vector3.new(15, 1, 15)
+                        waterPlatform.Parent = workspace
+                    end
+
+                    local rayParams = RaycastParams.new()
+                    rayParams.FilterDescendantsInstances = {workspace.Terrain} 
+                    rayParams.FilterType = Enum.RaycastFilterType.Include -- MODE WHITELIST
+                    rayParams.IgnoreWater = false -- Pastikan Air terdeteksi
+
+                    -- Tembak dari ketinggian di atas kepala
+                    local rayOrigin = hrp.Position + Vector3.new(0, 5, 0) 
+                    local rayDirection = Vector3.new(0, -500, 0)
+
+                    local result = workspace:Raycast(rayOrigin, rayDirection, rayParams)
+
+                    -- 2. LOGIKA DETEKSI
+                    if result and result.Material == Enum.Material.Water then
+                        -- Jika menabrak AIR (Terrain Water)
+                        local waterSurfaceHeight = result.Position.Y
+                        
+                        -- Taruh platform tepat di permukaan air
+                        waterPlatform.Position = Vector3.new(hrp.Position.X, waterSurfaceHeight, hrp.Position.Z)
+                        
+                        -- Jika kaki player tenggelam sedikit di bawah air, angkat ke atas
+                        if hrp.Position.Y < (waterSurfaceHeight + 2) and hrp.Position.Y > (waterSurfaceHeight - 5) then
+                             -- Cek input jump biar gak stuck pas mau loncat dari air
+                            if not UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                                hrp.CFrame = CFrame.new(hrp.Position.X, waterSurfaceHeight + 3.2, hrp.Position.Z)
+                            end
+                        end
+                    else
+                        -- Sembunyikan platform jika di darat
+                        waterPlatform.Position = Vector3.new(hrp.Position.X, -500, hrp.Position.Z)
+                    end
+                end)
+
+            else
+                WindUI:Notify({ Title = "Walk on Water OFF!", Duration = 3, Icon = "x", })
+                isWalkOnWater = false
+                if walkOnWaterConnection then walkOnWaterConnection:Disconnect() walkOnWaterConnection = nil end
+                if waterPlatform then waterPlatform:Destroy() waterPlatform = nil end
+            end
+        end
+    }))
+
+
 utility:Divider()
 
 -- =================================================================
     -- ￰ﾟﾌﾐ SERVER MANAGEMENT (REJOIN & HOP)
     -- =================================================================
-    local serverm = utility:Section({ Title = "Server Management", TextSize = 20})
+    local serverm = utility:Section({ Title = "Special Server", TextSize = 20})
 
     local TeleportService = game:GetService("TeleportService")
     local HttpService = game:GetService("HttpService")
@@ -685,230 +851,6 @@ utility:Divider()
             end
         end
     })
-
--- =================================================================
-    -- ￰ﾟﾎﾥ CINEMATIC / CONTENT TOOLS (V11 - CLEAN MODE FIX)
-    -- =================================================================
-    utility:Divider()
-    local cinematic = utility:Section({ Title = "Cinematic / Content Tools", TextSize = 20})
-
-    -- Services
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local UserInputService = game:GetService("UserInputService")
-    local StarterGui = game:GetService("StarterGui")
-    local Workspace = game:GetService("Workspace")
-    
-    -- Modules
-    local LocalPlayer = Players.LocalPlayer
-    
-    -- Settings & State
-    local freeCamSpeed = 1.5
-    local freeCamFov = 70
-    local isFreeCamActive = false
-    
-    local camera = Workspace.CurrentCamera
-    local camPos = camera.CFrame.Position
-    local camRot = Vector2.new(0,0)
-    
-    -- Manual Mouse Vars
-    local lastMousePos = Vector2.new(0,0)
-    local renderConn = nil
-    local touchConn = nil
-    local touchDelta = Vector2.new(0, 0)
-    
-    -- Restore
-    local oldWalkSpeed = 16
-    local oldJumpPower = 50
-
-    -- 1. SLIDER CAMERA SPEED
-    local cameras = cinematic:Slider({
-        Title = "Camera Speed",
-        Step = 0.1,
-        Value = { Min = 0.1, Max = 10.0, Default = 1.5 },
-        Callback = function(val) 
-            freeCamSpeed = tonumber(val) 
-        end
-    })
-
-    -- 2. SLIDER FOV
-    local fovcam = cinematic:Slider({
-        Title = "Field of View (FOV)",
-        Desc = "Zoom In/Out Lens.",
-        Step = 1,
-        Value = { Min = 10, Max = 120, Default = 70 },
-        Callback = function(val) 
-            freeCamFov = tonumber(val)
-            if isFreeCamActive then 
-                camera.FieldOfView = freeCamFov 
-            end
-        end
-    })
-
-    -- 3. TOGGLE CLEAN MODE (FIXED LOGIC)
-    local hideuiall = cinematic:Toggle({
-        Title = "Hide All UI (Clean Mode)",
-        Value = false,
-        Icon = "eye-off",
-        Callback = function(state)
-            local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-            
-            if state then
-                -- [LOGIKA FIX]: Simpan state asli sebelum dimatikan
-                for _, gui in ipairs(PlayerGui:GetChildren()) do
-                    if gui:IsA("ScreenGui") and gui.Name ~= "WindUI" and gui.Name ~= "CustomFloatingIcon_HookID" then
-                        -- Simpan status 'Enabled' saat ini ke Attribute
-                        gui:SetAttribute("OriginalState", gui.Enabled)
-                        gui.Enabled = false
-                    end
-                end
-                -- Matikan CoreGui (Chat, Leaderboard)
-                pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false) end)
-                
-                WindUI:Notify({ Title = "Clean Mode ON", Content = "UI hidden.", Duration = 2, Icon = "camera" })
-            else
-                -- [LOGIKA FIX]: Restore sesuai state asli
-                for _, gui in ipairs(PlayerGui:GetChildren()) do
-                    if gui:IsA("ScreenGui") then
-                        local originalState = gui:GetAttribute("OriginalState")
-                        if originalState ~= nil then
-                            gui.Enabled = originalState
-                            gui:SetAttribute("OriginalState", nil) -- Bersihkan attribute
-                        end
-                    end
-                end
-                -- Nyalakan CoreGui
-                pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end)
-                
-                WindUI:Notify({ Title = "Clean Mode OFF", Content = "UI back to normal.", Duration = 2, Icon = "eye" })
-            end
-        end
-    })
-
-    -- 4. FREE CAM (MANUAL TRACKING - YANG UDAH WORK)
-    local enablecam = cinematic:Toggle({
-        Title = "Enable Free Cam",
-        Value = false,
-        Icon = "video",
-        Callback = function(state)
-            isFreeCamActive = state
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChild("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-            if state then
-                -- INIT
-                camera.CameraType = Enum.CameraType.Scriptable
-                camPos = camera.CFrame.Position
-                local rx, ry, _ = camera.CFrame:ToEulerAnglesYXZ()
-                camRot = Vector2.new(rx, ry)
-                
-                -- INITIAL MOUSE POS
-                lastMousePos = UserInputService:GetMouseLocation()
-
-                -- FREEZE CHARACTER
-                if hum then
-                    oldWalkSpeed = hum.WalkSpeed
-                    oldJumpPower = hum.JumpPower
-                    hum.WalkSpeed = 0
-                    hum.JumpPower = 0
-                    hum.PlatformStand = true
-                end
-                if hrp then hrp.Anchored = true end
-
-                -- TOUCH LISTENER (MOBILE)
-                if touchConn then touchConn:Disconnect() end
-                touchConn = UserInputService.TouchMoved:Connect(function(input, processed)
-                    if not processed then touchDelta = input.Delta end
-                end)
-
-                -- [UPDATE] FREECAM RENDER LOOP (MOBILE SUPPORT)
-                local ControlModule = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
-
-                if renderConn then renderConn:Disconnect() end
-                renderConn = RunService.RenderStepped:Connect(function()
-                    if not isFreeCamActive then return end
-
-                    -- A. ROTASI KAMERA (Touch/Mouse)
-                    local currentMousePos = UserInputService:GetMouseLocation()
-                    if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-                        local deltaX = currentMousePos.X - lastMousePos.X
-                        local deltaY = currentMousePos.Y - lastMousePos.Y
-                        local sens = 0.003
-                        
-                        camRot = camRot - Vector2.new(deltaY * sens, deltaX * sens)
-                        camRot = Vector2.new(math.clamp(camRot.X, -1.55, 1.55), camRot.Y)
-                    end
-                    
-                    -- Mobile Touch Drag
-                    if UserInputService.TouchEnabled then
-                        camRot = camRot - Vector2.new(touchDelta.Y * 0.005 * 2.0, touchDelta.X * 0.005 * 2.0)
-                        camRot = Vector2.new(math.clamp(camRot.X, -1.55, 1.55), camRot.Y)
-                        touchDelta = Vector2.new(0, 0)
-                    end
-                    
-                    lastMousePos = currentMousePos
-
-                    -- B. PERGERAKAN (KEYBOARD + ANALOG MOBILE)
-                    local rotCFrame = CFrame.fromEulerAnglesYXZ(camRot.X, camRot.Y, 0)
-                    local moveVector = Vector3.zero
-
-                    -- 1. Ambil Input dari Control Module (Support WASD & Mobile Analog sekaligus)
-                    local rawMoveVector = ControlModule:GetMoveVector()
-                    
-                    -- 2. Input Keyboard Manual (untuk vertical E/Q)
-                    local verticalInput = 0
-                    if UserInputService:IsKeyDown(Enum.KeyCode.E) then verticalInput = 1 end
-                    if UserInputService:IsKeyDown(Enum.KeyCode.Q) then verticalInput = -1 end
-
-                    -- 3. Kalkulasi Arah (World Space)
-                    -- rawMoveVector.X adalah Kanan/Kiri (Relative Camera)
-                    -- rawMoveVector.Z adalah Maju/Mundur (Relative Camera)
-                    
-                    -- Konversi ke arah kamera saat ini
-                    if rawMoveVector.Magnitude > 0 then
-                        moveVector = (rotCFrame.RightVector * rawMoveVector.X) + (rotCFrame.LookVector * rawMoveVector.Z * -1)
-                    end
-                    
-                    -- Tambah gerakan Vertikal
-                    moveVector = moveVector + Vector3.new(0, verticalInput, 0)
-
-                    -- 4. Kecepatan (Shift untuk ngebut)
-                    local speedMultiplier = (UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and 4 or 1)
-                    local finalSpeed = freeCamSpeed * speedMultiplier
-                    
-                    -- 5. Terapkan Posisi
-                    if moveVector.Magnitude > 0 then
-                        camPos = camPos + (moveVector * finalSpeed)
-                    end
-
-                    -- C. UPDATE KAMERA
-                    camera.CFrame = CFrame.new(camPos) * rotCFrame
-                    camera.FieldOfView = freeCamFov 
-                end)
-                
-                WindUI:Notify({ Title = "Free Cam Ready", Content = "Free Cam activated.", Duration = 3, Icon = "check" })
-
-            else
-                -- MATIKAN
-                if renderConn then renderConn:Disconnect() renderConn = nil end
-                if touchConn then touchConn:Disconnect() touchConn = nil end
-                
-                camera.CameraType = Enum.CameraType.Custom
-                UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-                camera.FieldOfView = 70 
-
-                if hum then
-                    hum.WalkSpeed = oldWalkSpeed
-                    hum.JumpPower = oldJumpPower
-                    hum.PlatformStand = false
-                end
-                if hrp then hrp.Anchored = false end
-                
-                WindUI:Notify({ Title = "Free Cam OFF", Content = "Free Cam deactivated.", Duration = 3, Icon = "x" })
-            end
-        end
-    })
     
     -- =================================================================
     -- CHARACTER FEATURES (MOVED FROM CHARACTER TAB)
@@ -917,7 +859,7 @@ utility:Divider()
     
     -- MOVEMENT
     local movement = utility:Section({
-        Title = "Speed & Jump",
+        Title = "Special",
         TextSize = 18,
     })
 
@@ -1018,244 +960,6 @@ utility:Divider()
                 end
             else
                 WindUI:Notify({ Title = "Error", Content = "HumanoidRootPart not found.", Duration = 3, Icon = "alert-triangle" })
-            end
-        end
-    }))
-
-    local ability = utility:Section({
-        Title = "Special Powers",
-        TextSize = 18,
-    })
-
-    -- 1. TOGGLE INFINITE JUMP
-    local infjump = Reg("infj", ability:Toggle({
-        Title = "Infinite Jump",
-        Value = false,
-        Callback = function(state)
-            if state then
-                WindUI:Notify({ Title = "Infinite Jump ON!", Duration = 3, Icon = "check", })
-                InfinityJumpConnection = SafeConnect(
-                    UserInputService.JumpRequest,
-                    function()
-                        local Humanoid = GetHumanoid()
-                        if Humanoid and Humanoid.Health > 0 then
-                            Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                        end
-                    end,
-                    InfinityJumpConnectionId,
-                    "Infinite Jump",
-                    "ability"
-                )
-            else
-                WindUI:Notify({ Title = "Infinite Jump OFF!", Duration = 3, Icon = "check", })
-                SafeDisconnect(InfinityJumpConnectionId)
-                InfinityJumpConnection = nil
-            end
-        end
-    }))
-
-    -- 2. TOGGLE NO CLIP
-    local noclipConnection = nil
-    local noclipConnectionId = "noclipConnection"
-    local isNoClipActive = false
-    local noclip = Reg("nclip",ability:Toggle({
-        Title = "No Clip",
-        Value = false,
-        Callback = function(state)
-            isNoClipActive = state
-            local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-
-            if state then
-                WindUI:Notify({ Title = "No Clip ON!", Duration = 3, Icon = "check", })
-                noclipConnection = SafeConnect(
-                    game:GetService("RunService").Stepped,
-                    function()
-                        if isNoClipActive and character then
-                            for _, part in ipairs(character:GetDescendants()) do
-                                if part:IsA("BasePart") and part.CanCollide then
-                                    part.CanCollide = false
-                                end
-                            end
-                        end
-                    end,
-                    noclipConnectionId,
-                    "No Clip",
-                    "ability"
-                )
-            else
-                WindUI:Notify({ Title = "No Clip OFF!", Duration = 3, Icon = "x", })
-                SafeDisconnect(noclipConnectionId)
-                noclipConnection = nil
-
-                for _, part in ipairs(character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = true
-                    end
-                end
-            end
-        end
-    }))
-
-    -- 3. TOGGLE FLY MODE
-    local flyConnection = nil
-    local flyConnectionId = "flyConnection"
-    local isFlying = false
-    local flySpeed = 60
-    local bodyGyro, bodyVel
-    local flytog = Reg("flym",ability:Toggle({
-        Title = "Fly Mode",
-        Value = false,
-        Callback = function(state)
-            local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-            local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-            local humanoid = character:WaitForChild("Humanoid")
-
-            if state then
-                WindUI:Notify({ Title = "Fly Mode ON!", Duration = 3, Icon = "check", })
-                isFlying = true
-
-                bodyGyro = Instance.new("BodyGyro")
-                bodyGyro.P = 9e4
-                bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-                bodyGyro.CFrame = humanoidRootPart.CFrame
-                bodyGyro.Parent = humanoidRootPart
-
-                bodyVel = Instance.new("BodyVelocity")
-                bodyVel.Velocity = Vector3.zero
-                bodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-                bodyVel.Parent = humanoidRootPart
-
-                local cam = workspace.CurrentCamera
-                local moveDir = Vector3.zero
-                local jumpPressed = false
-
-                UserInputService.JumpRequest:Connect(function()
-                    if isFlying then jumpPressed = true task.delay(0.2, function() jumpPressed = false end) end
-                end)
-
-                flyConnection = SafeConnect(
-                    game:GetService("RunService").RenderStepped,
-                    function()
-                        if not isFlying or not humanoidRootPart or not bodyGyro or not bodyVel then return end
-                        
-                        bodyGyro.CFrame = cam.CFrame
-                        moveDir = humanoid.MoveDirection
-
-                        if jumpPressed then
-                            moveDir = moveDir + Vector3.new(0, 1, 0)
-                        elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-                            moveDir = moveDir - Vector3.new(0, 1, 0)
-                        end
-
-                        if moveDir.Magnitude > 0 then moveDir = moveDir.Unit * flySpeed end
-
-                        bodyVel.Velocity = moveDir
-                    end,
-                    flyConnectionId,
-                    "Fly Mode",
-                    "ability"
-                )
-
-            else
-                WindUI:Notify({ Title = "Fly Mode OFF!", Duration = 3, Icon = "x", })
-                isFlying = false
-
-                SafeDisconnect(flyConnectionId)
-                flyConnection = nil
-                if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
-                if bodyVel then bodyVel:Destroy() bodyVel = nil end
-            end
-        end
-    }))
-
-   -- 4. TOGGLE WALK ON WATER (FIXED: RESPAWN SUPPORT)
-    local walkOnWaterConnection = nil
-    local walkOnWaterConnectionId = "walkOnWaterConnection"
-    local isWalkOnWater = false
-    local waterPlatform = nil
-    
-    local walkon = Reg("walkwat",ability:Toggle({
-        Title = "Walk on Water",
-        Value = false,
-        Callback = function(state)
-            -- Kita tidak mendefinisikan 'character' di sini agar logic tidak stuck di char lama
-
-            if state then
-                WindUI:Notify({ Title = "Walk on Water ON!", Duration = 3, Icon = "check", })
-                isWalkOnWater = true
-                
-                -- Buat Platform jika belum ada
-                if not waterPlatform then
-                    waterPlatform = Instance.new("Part")
-                    waterPlatform.Name = "WaterPlatform"
-                    waterPlatform.Anchored = true
-                    waterPlatform.CanCollide = true
-                    waterPlatform.Transparency = 1 
-                    waterPlatform.Size = Vector3.new(15, 1, 15) -- Ukuran diperbesar sedikit
-                    waterPlatform.Parent = workspace
-                end
-
-                -- Pastikan koneksi lama mati dulu sebelum buat baru
-                SafeDisconnect(walkOnWaterConnectionId)
-
-                walkOnWaterConnection = SafeConnect(
-                    game:GetService("RunService").RenderStepped,
-                    function()
-                        -- [FIX] Ambil Karakter TERBARU setiap frame
-                    local character = LocalPlayer.Character
-                    if not isWalkOnWater or not character then return end
-                    
-                    local hrp = character:FindFirstChild("HumanoidRootPart")
-                    if not hrp then return end
-
-                    -- Pastikan platform masih ada (kadang kehapus oleh game cleanup)
-                    if not waterPlatform or not waterPlatform.Parent then
-                        waterPlatform = Instance.new("Part")
-                        waterPlatform.Name = "WaterPlatform"
-                        waterPlatform.Anchored = true
-                        waterPlatform.CanCollide = true
-                        waterPlatform.Transparency = 1 
-                        waterPlatform.Size = Vector3.new(15, 1, 15)
-                        waterPlatform.Parent = workspace
-                    end
-
-                    local rayParams = RaycastParams.new()
-                    rayParams.FilterDescendantsInstances = {workspace.Terrain} 
-                    rayParams.FilterType = Enum.RaycastFilterType.Include -- MODE WHITELIST
-                    rayParams.IgnoreWater = false -- Pastikan Air terdeteksi
-
-                    -- Tembak dari ketinggian di atas kepala
-                    local rayOrigin = hrp.Position + Vector3.new(0, 5, 0) 
-                    local rayDirection = Vector3.new(0, -500, 0)
-
-                    local result = workspace:Raycast(rayOrigin, rayDirection, rayParams)
-
-                    -- 2. LOGIKA DETEKSI
-                    if result and result.Material == Enum.Material.Water then
-                        -- Jika menabrak AIR (Terrain Water)
-                        local waterSurfaceHeight = result.Position.Y
-                        
-                        -- Taruh platform tepat di permukaan air
-                        waterPlatform.Position = Vector3.new(hrp.Position.X, waterSurfaceHeight, hrp.Position.Z)
-                        
-                        -- Jika kaki player tenggelam sedikit di bawah air, angkat ke atas
-                        if hrp.Position.Y < (waterSurfaceHeight + 2) and hrp.Position.Y > (waterSurfaceHeight - 5) then
-                             -- Cek input jump biar gak stuck pas mau loncat dari air
-                            if not UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                                hrp.CFrame = CFrame.new(hrp.Position.X, waterSurfaceHeight + 3.2, hrp.Position.Z)
-                            end
-                        end
-                    else
-                        -- Sembunyikan platform jika di darat
-                        waterPlatform.Position = Vector3.new(hrp.Position.X, -500, hrp.Position.Z)
-                    end
-                end)
-
-            else
-                WindUI:Notify({ Title = "Walk on Water OFF!", Duration = 3, Icon = "x", })
-                isWalkOnWater = false
-                if walkOnWaterConnection then walkOnWaterConnection:Disconnect() walkOnWaterConnection = nil end
-                if waterPlatform then waterPlatform:Destroy() waterPlatform = nil end
             end
         end
     }))
@@ -1376,130 +1080,6 @@ utility:Divider()
         }))
         end -- Close Hide Username block
 
-    -- 2. TOGGLE PLAYER ESP (Completely isolated block to avoid local register limit)
-    do
-        -- Get reference to other section from parent scope (capture it)
-        local otherSection = other
-        
-        -- ESP variables (all in isolated scope)
-        local runService = game:GetService("RunService")
-        local players = game:GetService("Players")
-        local LocalPlayer = game.Players.LocalPlayer
-        local STUD_TO_M = 0.28
-        local espEnabled = false
-        local espConnections = {}
-
-            local function removeESP(targetPlayer)
-                if not targetPlayer then return end
-                local data = espConnections[targetPlayer]
-                if data then
-                    if data.distanceConn then pcall(function() data.distanceConn:Disconnect() end) end
-                    if data.charAddedConn then pcall(function() data.charAddedConn:Disconnect() end) end
-                    if data.billboard and data.billboard.Parent then pcall(function() data.billboard:Destroy() end) end
-                    espConnections[targetPlayer] = nil
-                else
-                    if targetPlayer.Character then
-                        for _, v in ipairs(targetPlayer.Character:GetChildren()) do
-                            if v.Name == "HookIDESP" and v:IsA("BillboardGui") then pcall(function() v:Destroy() end) end
-                        end
-                    end
-                end
-            end
-
-            local function createESP(targetPlayer)
-            if not targetPlayer or not targetPlayer.Character or targetPlayer == LocalPlayer then return end
-
-            removeESP(targetPlayer)
-            local char = targetPlayer.Character
-            local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-            if not hrp then return end
-
-            local BillboardGui = Instance.new("BillboardGui")
-            BillboardGui.Name = "HookIDESP"
-            BillboardGui.Adornee = hrp
-            BillboardGui.Size = UDim2.new(0, 140, 0, 40)
-            BillboardGui.AlwaysOnTop = true
-            BillboardGui.StudsOffset = Vector3.new(0, 2.6, 0)
-            BillboardGui.Parent = char
-
-            local Frame = Instance.new("Frame")
-            Frame.Size = UDim2.new(1, 0, 1, 0)
-            Frame.BackgroundTransparency = 1
-            Frame.BorderSizePixel = 0
-            Frame.Parent = BillboardGui
-
-            local NameLabel = Instance.new("TextLabel")
-            NameLabel.Parent = Frame
-            NameLabel.Size = UDim2.new(1, 0, 0.6, 0)
-            NameLabel.Position = UDim2.new(0, 0, 0, 0)
-            NameLabel.BackgroundTransparency = 1
-            NameLabel.Text = tostring(targetPlayer.DisplayName or targetPlayer.Name)
-            NameLabel.TextColor3 = Color3.fromRGB(255, 230, 230)
-            NameLabel.TextStrokeTransparency = 0.7
-            NameLabel.Font = Enum.Font.GothamBold
-            NameLabel.TextScaled = true
-
-            local DistanceLabel = Instance.new("TextLabel")
-            DistanceLabel.Parent = Frame
-            DistanceLabel.Size = UDim2.new(1, 0, 0.4, 0)
-            DistanceLabel.Position = UDim2.new(0, 0, 0.6, 0)
-            DistanceLabel.BackgroundTransparency = 1
-            DistanceLabel.Text = "0.0 m"
-            DistanceLabel.TextColor3 = Color3.fromRGB(210, 210, 210)
-            NameLabel.TextStrokeTransparency = 0.85
-            DistanceLabel.Font = Enum.Font.GothamSemibold
-            DistanceLabel.TextScaled = true
-
-            espConnections[targetPlayer] = { billboard = BillboardGui }
-
-            local distanceConn = runService.RenderStepped:Connect(function()
-                if not espEnabled or not hrp or not hrp.Parent then removeESP(targetPlayer) return end
-                local localChar = LocalPlayer.Character
-                local localHRP = localChar and localChar:FindFirstChild("HumanoidRootPart")
-                if localHRP then
-                    local distStuds = (localHRP.Position - hrp.Position).Magnitude
-                    local distMeters = distStuds * STUD_TO_M
-                    DistanceLabel.Text = string.format("%.1f m", distMeters)
-                end
-            end)
-            espConnections[targetPlayer].distanceConn = distanceConn
-
-            local charAddedConn = targetPlayer.CharacterAdded:Connect(function()
-                task.wait(0.8)
-                if espEnabled then createESP(targetPlayer) end
-            end)
-            espConnections[targetPlayer].charAddedConn = charAddedConn
-            end
-
-            Reg("esp", otherSection:Toggle({
-            Title = "Player ESP",
-            Value = false,
-            Callback = function(state)
-                espEnabled = state
-                if state then
-                    WindUI:Notify({ Title = "ESP Aktif", Duration = 3, Icon = "eye", })
-                    for _, plr in ipairs(players:GetPlayers()) do
-                        if plr ~= LocalPlayer then createESP(plr) end
-                    end
-                    espConnections["playerAddedConn"] = players.PlayerAdded:Connect(function(plr)
-                        task.wait(1)
-                        if espEnabled then createESP(plr) end
-                    end)
-                    espConnections["playerRemovingConn"] = players.PlayerRemoving:Connect(function(plr)
-                        removeESP(plr)
-                    end)
-                else
-                    WindUI:Notify({ Title = "ESP Nonaktif", Content = "Semua marker ESP dihapus.", Duration = 3, Icon = "eye-off", })
-                    for plr, _ in pairs(espConnections) do
-                        if plr and typeof(plr) == "Instance" then removeESP(plr) end
-                    end
-                    if espConnections["playerAddedConn"] then espConnections["playerAddedConn"]:Disconnect() end
-                    if espConnections["playerRemovingConn"] then espConnections["playerRemovingConn"]:Disconnect() end
-                    espConnections = {}
-                end
-            end
-        }))
-    end -- Close ESP do block
 
     -- Wrap in do block to create new scope and avoid local register limit
     do
