@@ -286,14 +286,15 @@ do
         return itemNames
     end
     
-    local cachedItemNames = nil
-    local function GetCachedItemNames()
-        if cachedItemNames then return cachedItemNames end
-        cachedItemNames = getAutoFavoriteItemOptions()
-        return cachedItemNames
+    local cachedItemNames = {"(Loading...)"}
+    local function RefreshItemNameOptions(dropdown)
+        local names = getAutoFavoriteItemOptions()
+        if #names == 0 then
+            names = {"(No items found)"}
+        end
+        cachedItemNames = names
+        pcall(function() dropdown:Refresh(names) end)
     end
-    
-    local allItemNames = {"(Loading...)"}
     
     -- FUNGSI HELPER: Mendapatkan semua item yang memenuhi kriteria (DIFORWARD KE FAVORITE)
     -- GANTI FUNGSI LAMA 'GetItemsToFavorite' DENGAN YANG INI:
@@ -466,17 +467,22 @@ end
         Callback = function(values) selectedRarities = values or {} end
     }))
 
-    local ItemNameDropdown = Reg("dtem",favsec:Dropdown({
+    local favItemNameDropdown = Reg("dtem",favsec:Dropdown({
         Title = "by Item Name",
-        Values = allItemNames, -- akan di-refresh setelah load
+        Values = cachedItemNames,
         Multi = true, AllowNone = true, Value = false,
         Callback = function(values) selectedItemNames = values or {} end -- Multi select untuk nama
     }))
-
-    task.spawn(function()
-        local names = GetCachedItemNames()
-        pcall(function() ItemNameDropdown:Refresh(names) end)
-    end)
+    
+    favsec:Button({
+        Title = "Refresh Item List",
+        Icon = "refresh-ccw",
+        Callback = function()
+            RefreshItemNameOptions(favItemNameDropdown)
+            pcall(function() favItemNameDropdown:Set(false) end)
+            selectedItemNames = {}
+        end
+    })
 
     local MutationDropdown = Reg("dmut",favsec:Dropdown({
         Title = "by Mutation",
@@ -629,10 +635,10 @@ end
     
     automatic:Divider()
     
-    local ItemNameDropdown
-    ItemNameDropdown = trade:Dropdown({
+    local tradeItemNameDropdown
+    tradeItemNameDropdown = trade:Dropdown({
         Title = "Filter Item Name",
-        Values = {"(Loading...)"},
+        Values = cachedItemNames,
         Value = false,
         Multi = false,
         AllowNone = true,
@@ -640,11 +646,16 @@ end
             selectedTradeItemName = name or nil -- Set ke nil jika "None"
         end
     })
-
-    task.spawn(function()
-        local names = GetCachedItemNames()
-        pcall(function() ItemNameDropdown:Refresh(names) end)
-    end)
+    
+    trade:Button({
+        Title = "Refresh Item List",
+        Icon = "refresh-ccw",
+        Callback = function()
+            RefreshItemNameOptions(tradeItemNameDropdown)
+            pcall(function() tradeItemNameDropdown:Set(false) end)
+            selectedTradeItemName = nil
+        end
+    })
 
     -- 2. Filter Rarity Dropdown (SINGLE SELECT)
     local raretrade = trade:Dropdown({
