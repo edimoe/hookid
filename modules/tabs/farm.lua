@@ -336,6 +336,7 @@ do
     local loopInterval = CONSTANTS.BlatantLoopInterval
     local maxRetries = CONSTANTS.BlatantMaxRetries
     local retryDelay = CONSTANTS.BlatantRetryDelay
+    local blatantMaxConcurrent = 5
     
     _G.HookID_BlatantActive = false
     _G.BlatantLastCatchTime = 0  -- Track last successful catch
@@ -474,14 +475,14 @@ do
         end
     }))
 
-    local blatantActionActive = false
+    local blatantActionCount = 0
 
     local function runBlatantInstant()
         if not blatantInstantState then return end
-        if blatantActionActive then return end
+        if blatantActionCount >= blatantMaxConcurrent then return end
         if not checkFishingRemotes(true) then blatantInstantState = false return end
 
-        blatantActionActive = true
+        blatantActionCount = blatantActionCount + 1
         task.spawn(function()
             local ok, err = pcall(function()
                 local startTime = os.clock()
@@ -558,7 +559,7 @@ do
             if not ok then
                 warn("[Blatant] runBlatantInstant error: " .. tostring(err))
             end
-            blatantActionActive = false
+            blatantActionCount = math.max(0, blatantActionCount - 1)
         end)
     end
 
@@ -593,10 +594,7 @@ do
                 -- 2. Loop Kita (OPTIMASI: Kurangi overhead dengan pre-check)
                 blatantLoopThread = SafeSpawnThread("blatantLoopThread", function()
                     while blatantInstantState do
-                        if blatantActionActive then
-                            task.wait(0.05)
-                            continue
-                        elseif type(checkFishingRemotes) == "function" and checkFishingRemotes(true) then
+                        if type(checkFishingRemotes) == "function" and checkFishingRemotes(true) then
                             if type(runBlatantInstant) == "function" then
                                 runBlatantInstant()
                             else
@@ -628,7 +626,7 @@ do
                     local lastEquipAttempt = 0
                     local equipCooldown = 0.6
                     while blatantInstantState do
-                        if blatantActionActive then
+                        if blatantActionCount > 0 then
                             task.wait(CONSTANTS.BlatantEquipDelay)
                             continue
                         end
