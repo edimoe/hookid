@@ -331,7 +331,7 @@ do
     -- =============================
     -- BLATANT SMART THROTTLE
     -- =============================
-    local BLATANT_THROTTLE = 0.7  -- Delay aman untuk menurunkan recv
+    local BLATANT_THROTTLE = 0.16  -- Delay aman untuk menurunkan recv
     local lastBlatantAction = 0
     
     local function CanBlatant()
@@ -682,6 +682,7 @@ do
     }))
 
 end
+
 
 
 
