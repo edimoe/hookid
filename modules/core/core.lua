@@ -1687,7 +1687,7 @@ end
 FishingAreas = {
         ["Pirate Cove"] = {Pos = Vector3.new(3479.130, 4.192, 3454.337), Look = Vector3.new(-0.921, 0.000, 0.389)},
         ["Pirate Treasure Room"] = {Pos = Vector3.new(3297.049, -305.896, 3071.873), Look = Vector3.new(0.894, -0.000, -0.448)},
-        ["Crystal Dapths"] = {Pos = Vector3.new(3615.381, -903.603, 15347.183), Look = Vector3.new(0.290, -0.000, 0.957)},
+        ["Crystal Dapths"] = {Pos = Vector3.new(5617.232, -903.285, 15344.378), Look = Vector3.new(-0.341, -0.000, 0.940)},
         ["Leviathan's Den"] = {Pos = Vector3.new(3440.133, -281.042, 3541.572), Look = Vector3.new(0.738, -0.000, -0.675)},
         ["Ancient Jungle"] = {Pos = Vector3.new(1535.639, 3.159, -193.352), Look = Vector3.new(0.505, -0.000, 0.863)},
         ["Arrow Lever"] = {Pos = Vector3.new(898.296, 8.449, -361.856), Look = Vector3.new(0.023, -0.000, 1.000)},
@@ -1750,3 +1750,4 @@ function GetEventGUI()
         return nil
     end
 end
+
