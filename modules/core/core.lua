@@ -1222,7 +1222,7 @@ ENCHANT_MAPPING = {
     ["Prismatic I"] = 13,
     ["Reeler I"] = 2,
     ["Reeler II"] = 21,
-    ["SECRET Hunter"] = 16,
+    ["Secret Hunter I"] = 16,
     ["Shark Hunter"] = 20,
     ["Fairy Hunter I"] = 18,
     ["Stargazer I"] = 8,
@@ -1687,6 +1687,7 @@ end
 FishingAreas = {
         ["Pirate Cove"] = {Pos = Vector3.new(3479.130, 4.192, 3454.337), Look = Vector3.new(-0.921, 0.000, 0.389)},
         ["Pirate Treasure Room"] = {Pos = Vector3.new(3297.049, -305.896, 3071.873), Look = Vector3.new(0.894, -0.000, -0.448)},
+        ["Crystal Dapths"] = {Pos = Vector3.new(3615.381, -903.603, 15347.183), Look = Vector3.new(0.290, -0.000, 0.957)},
         ["Ancient Jungle"] = {Pos = Vector3.new(1535.639, 3.159, -193.352), Look = Vector3.new(0.505, -0.000, 0.863)},
         ["Arrow Lever"] = {Pos = Vector3.new(898.296, 8.449, -361.856), Look = Vector3.new(0.023, -0.000, 1.000)},
         ["Coral Reef"] = {Pos = Vector3.new(-3207.538, 6.087, 2011.079), Look = Vector3.new(0.973, 0.000, 0.229)},
@@ -1748,5 +1749,3 @@ function GetEventGUI()
         return nil
     end
 end
-
-
