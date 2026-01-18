@@ -44,8 +44,6 @@ do
     local RF_UpdateAutoFishingState = GetRemote(RPath, "RF/UpdateAutoFishingState")
     
     -- [LOCATIONS]
-    local GOSTQUEST_POS = Vector3.new(-3737.657, -135.574, -1035.283)
-    local GOSTQUEST_LOOK = Vector3.new(-0.258, 0.000, -0.966)
     local ENCHANT_ROOM_POS = Vector3.new(3255.670, -1301.530, 1371.790)
     local ENCHANT_ROOM_LOOK = Vector3.new(-0.000, -0.000, -1.000)
     local TREASURE_ROOM_POS = Vector3.new(-3598.440, -281.274, -1645.855)
@@ -882,7 +880,7 @@ do
                     
                     if not p.BoardFound then
                         uiData.Labels.Quest.Text = "Loading Board..."
-                        TeleportToLookAt(GOSTQUEST_POS, GOSTQUEST_LOOK)
+                        TeleportToLookAt(SECOND_ALTAR_POS, SECOND_ALTAR_LOOK)
                         task.wait(2)
                     else
                         if p.AllDone then
