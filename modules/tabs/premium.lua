@@ -882,7 +882,7 @@ do
                     
                     if not p.BoardFound then
                         uiData.Labels.Quest.Text = "Loading Board..."
-                        TeleportToLookAt(OSTQUEST_POS, SECOND_ALTAR_LOOK)
+                        TeleportToLookAt(GOSTQUEST_POS, GOSTQUEST_LOOK)
                         task.wait(2)
                     else
                         if p.AllDone then
@@ -912,7 +912,7 @@ do
 
                     if not p.BoardFound then
                         uiData.Labels.Quest.Text = "Mencari Papan Element..."
-                        TeleportToLookAt(SECOND_ALTAR_POS, GOSTQUEST_LOOK)
+                        TeleportToLookAt(SECOND_ALTAR_POS, SECOND_ALTAR_LOOK)
                         task.wait(2)
                     else
                         local currentTaskText = "Quest Complete!"
