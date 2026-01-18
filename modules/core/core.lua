@@ -1687,7 +1687,6 @@ end
 FishingAreas = {
         ["Pirate Cove"] = {Pos = Vector3.new(3479.130, 4.192, 3454.337), Look = Vector3.new(-0.921, 0.000, 0.389)},
         ["Pirate Treasure Room"] = {Pos = Vector3.new(3297.049, -305.896, 3071.873), Look = Vector3.new(0.894, -0.000, -0.448)},
-        ["Crystal Dapths"] = {Pos = Vector3.new(5617.232, -903.285, 15344.378), Look = Vector3.new(-0.341, -0.000, 0.940)},
         ["Leviathan's Den"] = {Pos = Vector3.new(3440.133, -281.042, 3541.572), Look = Vector3.new(0.738, -0.000, -0.675)},
         ["Ancient Jungle"] = {Pos = Vector3.new(1535.639, 3.159, -193.352), Look = Vector3.new(0.505, -0.000, 0.863)},
         ["Arrow Lever"] = {Pos = Vector3.new(898.296, 8.449, -361.856), Look = Vector3.new(0.023, -0.000, 1.000)},
@@ -1712,6 +1711,27 @@ FishingAreas = {
         ["Volcano"] = {Pos = Vector3.new(-605.121, 19.516, 160.010), Look = Vector3.new(0.854, 0.000, 0.520)},
         ["Weather Machine"] = {Pos = Vector3.new(-1518.550, 2.875, 1916.148), Look = Vector3.new(0.042, 0.000, 0.999)},
     }
+
+    -- =====================================
+    -- AUTO ADD: CRYSTAL DEPTHS (FROM SPAWN)
+    -- =====================================
+    do
+        local spawns = workspace:WaitForChild("!!! SPAWN LOCATIONS")
+        local crystal = spawns:WaitForChild("Crystal Depths")
+
+        local cf
+        if crystal:IsA("BasePart") then
+            cf = crystal.CFrame
+        else
+            cf = crystal:GetPivot()
+        end
+
+        FishingAreas["Crystal Depths"] = {
+            Pos = cf.Position,
+            Look = cf.LookVector
+        }
+    end
+
     AreaNames = {}
     for name, _ in pairs(FishingAreas) do
         table.insert(AreaNames, name)
