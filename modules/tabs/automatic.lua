@@ -233,6 +233,7 @@ do
             end
         end
     }))
+    task.wait(0.03) -- small yield to reduce UI build spike
     
     local favsec = automatic:Section({ Title = "Auto Favorite / Unfavorite", TextSize = 20, })
     
@@ -485,6 +486,7 @@ end
     }))
     
     automatic:Divider()
+    task.wait(0.03)
 
     local trade = automatic:Section({ Title = "Auto Trade", TextSize = 20})
 
@@ -892,6 +894,7 @@ end
             end
         end
     })
+    task.wait(0.03)
 
 
     local enchant = automatic:Section({ Title = "Auto Enchant Rod", TextSize = 20,})
@@ -1017,6 +1020,7 @@ end
             end
         end
     })
+    task.wait(0.03)
 
 -- =================================================================
     -- ￰ﾟﾔﾮ AUTO SECOND ENCHANT & STONE CREATION
@@ -1425,6 +1429,7 @@ end
             end
         end
     })
+    task.wait(0.03)
     
     -- =================================================================
     -- AUTO BUY WEATHER
