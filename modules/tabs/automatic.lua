@@ -237,7 +237,7 @@ do
     
     local favsec = automatic:Section({ Title = "Auto Favorite / Unfavorite", TextSize = 20, })
     
-    local allItemNames = itemNameCache or {"(Loading...)"}
+    local allItemNames = itemNameCache or {"(Click Refresh)"}
     
     -- FUNGSI HELPER: Mendapatkan semua item yang memenuhi kriteria (DIFORWARD KE FAVORITE)
     -- GANTI FUNGSI LAMA 'GetItemsToFavorite' DENGAN YANG INI:
@@ -417,7 +417,6 @@ end
         Callback = function(values) selectedItemNames = values or {} end -- Multi select untuk nama
     }))
     RegisterItemNameDropdown(ItemNameDropdown)
-    LoadItemNameCacheAsync()
     
     local RefreshItemNamesButton = favsec:Button({
         Title = "Refresh Item Names",
@@ -584,7 +583,7 @@ end
     local ItemNameDropdown
     ItemNameDropdown = trade:Dropdown({
         Title = "Filter Item Name",
-        Values = itemNameCache or {"(Loading...)"},
+        Values = itemNameCache or {"(Click Refresh)"},
         Value = false,
         Multi = false,
         AllowNone = true,
