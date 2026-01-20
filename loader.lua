@@ -67,7 +67,7 @@ local failedCount = 0
 LoadModule(MODULE_LOAD_ORDER[1])
 loadedCount = loadedCount + 1
 
--- Load remaining modules sequentially in a single coroutine to reduce spikes
+-- Load remaining modules in a single coroutine (serialized) to reduce spikes
 task.spawn(function()
     for i = 2, #MODULE_LOAD_ORDER do
         local moduleInfo = MODULE_LOAD_ORDER[i]
@@ -76,7 +76,7 @@ task.spawn(function()
         else
             failedCount = failedCount + 1
         end
-        task.wait(MODULE_LOAD_DELAY) -- larger delay to reduce load spikes
+        task.wait(0.08) -- slightly larger delay between modules
     end
 end)
 
@@ -88,3 +88,4 @@ print("========================================")
 print(string.format("[HookID] Loader initiated in %.2fs", loadTime))
 print("Loaded modules (core started + coroutines): %d | Failed modules: %d", loadedCount, failedCount)
 print("========================================")
+
