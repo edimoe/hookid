@@ -24,8 +24,37 @@ do
 
     local NormalInstantSlider = nil
 
+    -- Variabel Fishing Area
+    local isTeleportFreezeActive = false
+    local freezeToggle = nil
+    local selectedArea = nil
+    
+    local savedPosition = nil -- Menyimpan {Pos = Vector3, Look = Vector3}
+
+    -----------------------------------------------------------------
     -- ￰ﾟﾛﾠ￯ﾸﾏ FUNGSI HELPER
     -----------------------------------------------------------------
+    
+    local function GetHRP()
+        local Character = game.Players.LocalPlayer.Character
+        if not Character then
+            Character = game.Players.LocalPlayer.CharacterAdded:Wait()
+        end
+        return Character:WaitForChild("HumanoidRootPart", 5)
+    end
+    
+    local function TeleportToLookAt(position, lookVector)
+        local hrp = GetHRP()
+        
+        if hrp and typeof(position) == "Vector3" and typeof(lookVector) == "Vector3" then
+            local targetCFrame = CFrame.new(position, position + lookVector)
+            hrp.CFrame = targetCFrame * CFrame.new(0, 0.5, 0)
+            
+            WindUI:Notify({ Title = "Teleport Sukses!", Duration = 3, Icon = "map-pin", })
+        else
+            WindUI:Notify({ Title = "Teleport Gagal", Duration = 3, Icon = "x", })
+        end
+    end
     
     local RPath = {"Packages", "_Index", "sleitnick_net@0.2.0", "net"}
     local RE_EquipToolFromHotbar = GetRemote(RPath, "RE/EquipToolFromHotbar")
@@ -211,7 +240,7 @@ do
     -- ￰ﾟﾎﾣ AUTO FISHING SECTION UI
     -- =================================================================
     local autofish = farm:Section({
-        Title = "Auto Fishing Legit",
+        Title = "Auto Fishing",
         TextSize = 20,
         FontWeight = Enum.FontWeight.SemiBold,
     })
@@ -238,13 +267,18 @@ do
             legitAutoState = state
             ToggleAutoClick(state)
 
-            -- [THREAD BARU] AUTO EQUIP BACKGROUND - LEGIT MODE
+            -- [THREAD BARU] AUTO EQUIP BACKGROUND - LEGIT MODE (throttled)
             if state then
                 if legitEquipThread then task.cancel(legitEquipThread) end
                 legitEquipThread = task.spawn(function()
+                    local equipInterval = 0.4 -- throttle to reduce recv/load
                     while legitAutoState do
-                        pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
-                        task.wait(0.1) -- Delay spam 0.1 detik
+                        local character = LocalPlayer.Character
+                        local tool = character and character:FindFirstChildOfClass("Tool")
+                        if not tool or not tool.Name:find("Rod") then
+                            pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
+                        end
+                        task.wait(equipInterval)
                     end
                 end)
             else
@@ -255,18 +289,10 @@ do
 
     farm:Divider()
     
-    -- =================================================================
-    -- ￰ﾟﾔﾹ NORMAL INSTANT SECTION
-    -- =================================================================
-    local normalSection = farm:Section({
-        Title = "Normal Instant",
-        TextSize = 20,
-    })
-    
     -- Variabel & Slider Delay
     local normalCompleteDelay = CONSTANTS.NormalCompleteDelayDefault
 
-    NormalInstantSlider = Reg("normalslid",normalSection:Slider({
+    NormalInstantSlider = Reg("normalslid",autofish:Slider({
         Title = "Normal Complete Delay",
         Step = 0.05,
         Value = { Min = CONSTANTS.NormalCompleteDelayMin, Max = CONSTANTS.NormalCompleteDelayMax, Default = normalCompleteDelay },
@@ -289,7 +315,7 @@ do
         pcall(function() RF_CancelFishingInputs:InvokeServer() end)
     end
 
-    local normalins = Reg("tognorm",normalSection:Toggle({
+    local normalins = Reg("tognorm",autofish:Toggle({
         Title = "Normal Instant Fish",
         Value = false,
         Callback = function(state)
@@ -307,12 +333,17 @@ do
                     ThreadManager:Unregister("normalLoopThread")
                 end, "Normal Instant Fish Loop")
 
-                -- THREAD 2: Background Auto Equip (Anti-Stuck)
+                -- THREAD 2: Background Auto Equip (Anti-Stuck, throttled)
                 if normalEquipThread then task.cancel(normalEquipThread) end
                 normalEquipThread = task.spawn(function()
+                    local equipInterval = 0.4 -- throttle to reduce recv/load
                     while normalInstantState do
-                        pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
-                        task.wait(0.1) -- Delay spam 0.1 detik
+                        local character = LocalPlayer.Character
+                        local tool = character and character:FindFirstChildOfClass("Tool")
+                        if not tool or not tool.Name:find("Rod") then
+                            pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
+                        end
+                        task.wait(equipInterval)
                     end
                 end)
                 
@@ -489,14 +520,11 @@ do
         end
     }))
 
-    local blatantActionActive = false
-
     local function runBlatantInstant()
         if not blatantInstantState then return end
         if not checkFishingRemotes(true) then blatantInstantState = false return end
 
         task.spawn(function()
-            blatantActionActive = true
             local startTime = os.clock()
             local timestamp = os.time() + os.clock()
             local success = false
@@ -567,7 +595,6 @@ do
             if not success and attempts > maxRetries then
                 warn("[Blatant] Failed after " .. attempts .. " attempts")
             end
-            blatantActionActive = false
         end)
     end
 
@@ -629,31 +656,16 @@ do
                     blatantEquipThread = nil
                 end
                 blatantEquipThread = SafeSpawnThread("blatantEquipThread", function()
-                    local missingCount = 0
-                    local lastEquipAttempt = 0
-                    local equipCooldown = 0.6
                     while blatantInstantState do
-                        if blatantActionActive then
-                            task.wait(CONSTANTS.BlatantEquipDelay)
-                            continue
-                        end
                         -- OPTIMASI: Cek apakah rod sudah equipped sebelum spam
                         local character = LocalPlayer.Character
                         if character then
                             local tool = character:FindFirstChildOfClass("Tool")
-                            if tool and tool.Name:find("Rod") then
-                                missingCount = 0
-                            else
-                                missingCount = missingCount + 1
+                            if not tool or not tool.Name:find("Rod") then
+                                pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
                             end
                         else
-                            missingCount = missingCount + 1
-                        end
-                        
-                        if missingCount >= 5 and (os.clock() - lastEquipAttempt) >= equipCooldown then
-                            lastEquipAttempt = os.clock()
                             pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
-                            missingCount = 0
                         end
                         task.wait(CONSTANTS.BlatantEquipDelay)
                     end
@@ -681,12 +693,160 @@ do
         end
     }))
 
+    farm:Divider()
+
+    -- -----------------------------------------------------------------
+    -- ￰ﾟﾎﾯ FISHING AREA SECTION (POSITION + LOOKVECTOR)
+    -- -----------------------------------------------------------------
+    local areafish = farm:Section({
+        Title = "Fishing Area",
+        TextSize = 20,
+    })
+
+    -- 1. DROPDOWN Choose Area
+    local choosearea = areafish:Dropdown({
+        Title = "Choose Area",
+        Values = AreaNames,
+        AllowNone = true,
+        Value = nil,
+        Callback = function(option)
+            selectedArea = option
+            local display = option or "None"
+        end
+    })
+
+    local freezeToggle = areafish:Toggle({
+        Title = "Teleport & Freeze",
+        Desc = "Teleport -> Wait for Server Sync -> Freeze.",
+        Value = false,
+        Callback = function(state)
+            isTeleportFreezeActive = state
+            
+            local hrp = GetHRP()
+            if not hrp then
+                if freezeToggle and freezeToggle.Set then freezeToggle:Set(false) end
+                return
+            end
+
+            if state then
+                if not selectedArea then
+                    WindUI:Notify({ Title = "Action Failed", Content = "Select Area first in Dropdown!", Duration = 3, Icon = "alert-triangle", })
+                    if freezeToggle and freezeToggle.Set then freezeToggle:Set(false) end
+                    return
+                end
+                
+                local areaData = (selectedArea == "Custom: Saved" and savedPosition) or FishingAreas[selectedArea]
+
+                if not areaData or not areaData.Pos or not areaData.Look then
+                    WindUI:Notify({ Title = "Action Failed", Duration = 3, Icon = "alert-triangle", })
+                    if freezeToggle and freezeToggle.Set then freezeToggle:Set(false) end
+                    return
+                end
+                
+                -- 1. Unanchor dulu
+                hrp.Anchored = false
+                
+                -- 2. Teleport ke Posisi Target
+                TeleportToLookAt(areaData.Pos, areaData.Look)
+                
+                -- 3. [FIX] Tahan posisi tanpa Anchor selama 1.5 detik agar Server update Zona
+                WindUI:Notify({ Title = "Syncing Zone...", Content = "Holding position so server can read new location...", Duration = 1.5, Icon = "wifi" })
+                
+                local startTime = os.clock()
+                -- Loop selama 1.5 detik: Paksa diam tapi Physics tetap jalan (Server Update)
+                while (os.clock() - startTime) < 1.5 and isTeleportFreezeActive do
+                    if hrp then
+                        hrp.Velocity = Vector3.new(0,0,0)
+                        hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                        -- Sedikit koreksi posisi biar server sadar kita disana
+                        hrp.CFrame = CFrame.new(areaData.Pos, areaData.Pos + areaData.Look) * CFrame.new(0, 0.5, 0)
+                    end
+                    game:GetService("RunService").Heartbeat:Wait()
+                end
+                
+                -- 4. Baru Freeze Total (Anchored) setelah server sync
+                if isTeleportFreezeActive and hrp then
+                    hrp.Anchored = true
+                    WindUI:Notify({ Title = "Ready to Fish", Content = "Position locked & Zone updated.", Duration = 2, Icon = "check" })
+                end
+                
+            else
+                -- Matikan Freeze (UNANCHORED)
+                if hrp then hrp.Anchored = false end
+                WindUI:Notify({ Title = "Unfrozen", Content = "Gerakan kembali normal.", Duration = 2, Icon = "unlock" })
+            end
+        end
+    })
+
+    local teleto = areafish:Button({
+        Title = "Teleport to Choosen Area",
+        Icon = "corner-down-right",
+        Callback = function()
+            if not selectedArea then
+                WindUI:Notify({ Title = "Teleport Failed", Content = "Select Area first in Dropdown!", Duration = 3, Icon = "alert-triangle", })
+                return
+            end
+
+            local areaData = (selectedArea == "Custom: Saved" and savedPosition) or FishingAreas[selectedArea]
+            
+            if not areaData or not areaData.Pos or not areaData.Look then
+                WindUI:Notify({ Title = "Teleport Failed",Duration = 3, Icon = "alert-triangle", })
+                return
+            end
+
+            if isTeleportFreezeActive and freezeToggle then
+                freezeToggle:Set(false)
+                task.wait(0.1)
+            end
+            
+            TeleportToLookAt(areaData.Pos, areaData.Look)
+        end
+    })
+
+    farm:Divider()
+
+    -- 3. BUTTON Save Current Position
+    local savepos = areafish:Button({
+        Title = "Save Current Position",
+        Icon = "map-pin",
+        Callback = function()
+            local hrp = GetHRP()
+            if hrp then
+                savedPosition = {
+                    Pos = hrp.Position,
+                    Look = hrp.CFrame.LookVector
+                }
+                FishingAreas["Custom: Saved"] = savedPosition
+                WindUI:Notify({
+                    Title = "Position Saved!",
+                    Duration = 3,
+                    Icon = "save",
+                })
+            else
+                WindUI:Notify({ Title = "Failed to Save", Duration = 3, Icon = "x", })
+            end
+        end
+    })
+
+    
+    -- 6. BUTTON Teleport to SAVED POS
+    local teletosave = areafish:Button({
+        Title = "Teleport to SAVED Pos",
+        Icon = "navigation",
+        Callback = function()
+            if not savedPosition then
+                WindUI:Notify({ Title = "Teleport Failed", Content = "No position saved.", Duration = 3, Icon = "alert-triangle", })
+                return
+            end
+            
+            local areaData = savedPosition
+            
+            if isTeleportFreezeActive and freezeToggle then
+                freezeToggle:Set(false)
+                task.wait(0.1)
+            end
+            
+            TeleportToLookAt(areaData.Pos, areaData.Look)
+        end
+    })
 end
-
-
-
-
-
-
-
-
