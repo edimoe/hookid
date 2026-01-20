@@ -67,18 +67,18 @@ local failedCount = 0
 LoadModule(MODULE_LOAD_ORDER[1])
 loadedCount = loadedCount + 1
 
--- Load remaining modules in a single coroutine (serialized) to reduce spikes
-task.spawn(function()
-    for i = 2, #MODULE_LOAD_ORDER do
-        local moduleInfo = MODULE_LOAD_ORDER[i]
+-- Load remaining modules in coroutine to prevent freeze
+for i = 2, #MODULE_LOAD_ORDER do
+    local moduleInfo = MODULE_LOAD_ORDER[i]
+    task.spawn(function()
         if LoadModule(moduleInfo) then
             loadedCount = loadedCount + 1
         else
             failedCount = failedCount + 1
         end
-        task.wait(0.08) -- slightly larger delay between modules
-    end
-end)
+    end)
+    task.wait(0.04) -- small delay between modules
+end
 
 -- Optional: wait a short moment to let coroutines start
 task.wait(0.1)
