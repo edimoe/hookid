@@ -99,6 +99,18 @@ do
             pcall(function() if RF_UpdateAutoFishingState then RF_UpdateAutoFishingState:InvokeServer(false) end end)
         end
     end
+
+    local function IsRodEquipped()
+        local character = LocalPlayer.Character
+        if not character then
+            return false
+        end
+        local tool = character:FindFirstChildOfClass("Tool")
+        return tool and tool.Name:find("Rod") or false
+    end
+
+    local EQUIP_CHECK_INTERVAL = 0.25
+    local EQUIP_COOLDOWN = 0.8
     
     -- ===================================================================
     -- LOGIKA BARU UNTUK AUTO FISH LEGIT
@@ -211,7 +223,7 @@ do
     -- ￰ﾟﾎﾣ AUTO FISHING SECTION UI
     -- =================================================================
     local autofish = farm:Section({
-        Title = "Auto Fishing Legit",
+        Title = "Auto Fishing",
         TextSize = 20,
         FontWeight = Enum.FontWeight.SemiBold,
     })
@@ -238,13 +250,18 @@ do
             legitAutoState = state
             ToggleAutoClick(state)
 
-            -- [THREAD BARU] AUTO EQUIP BACKGROUND - LEGIT MODE
+            -- [THREAD BARU] AUTO EQUIP BACKGROUND - LEGIT MODE (throttled)
             if state then
                 if legitEquipThread then task.cancel(legitEquipThread) end
                 legitEquipThread = task.spawn(function()
+                    local equipInterval = 0.4 -- throttle to reduce recv/load
                     while legitAutoState do
-                        pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
-                        task.wait(0.1) -- Delay spam 0.1 detik
+                        local character = LocalPlayer.Character
+                        local tool = character and character:FindFirstChildOfClass("Tool")
+                        if not tool or not tool.Name:find("Rod") then
+                            pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
+                        end
+                        task.wait(equipInterval)
                     end
                 end)
             else
@@ -302,17 +319,22 @@ do
                 normalLoopThread = SafeSpawnThread("normalLoopThread", function()
                     while normalInstantState do
                         runNormalInstant()
-                        task.wait(CONSTANTS.NormalFishingDelay) 
+                        task.wait(CONSTANTS.NormalFishingDelay)
                     end
                     ThreadManager:Unregister("normalLoopThread")
                 end, "Normal Instant Fish Loop")
 
-                -- THREAD 2: Background Auto Equip (Anti-Stuck)
+                -- THREAD 2: Background Auto Equip (Anti-Stuck, throttled)
                 if normalEquipThread then task.cancel(normalEquipThread) end
                 normalEquipThread = task.spawn(function()
+                    local equipInterval = 0.4 -- throttle to reduce recv/load
                     while normalInstantState do
-                        pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
-                        task.wait(0.1) -- Delay spam 0.1 detik
+                        local character = LocalPlayer.Character
+                        local tool = character and character:FindFirstChildOfClass("Tool")
+                        if not tool or not tool.Name:find("Rod") then
+                            pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
+                        end
+                        task.wait(equipInterval)
                     end
                 end)
                 
@@ -682,11 +704,4 @@ do
     }))
 
 end
-
-
-
-
-
-
-
 
