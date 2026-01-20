@@ -390,69 +390,12 @@ end
 
 print("[HookID] Connection Manager initialized")
 
--- Helper function untuk cancel thread dengan verification
-function SafeCancelThread(threadVar, threadId, description)
-    if not threadVar then return true end
-    
-    -- Register jika belum terdaftar
-    if threadId and not ThreadManager.activeThreads[threadId] then
-        ThreadManager:Register(threadId, threadVar, description)
-    end
-    
-    -- Cancel dengan verification
-    local success = ThreadManager:Cancel(threadId or "unknown", false)
-    
-    if success then
-        threadVar = nil
-    end
-    
-    return success, threadVar
-end
-
 -- Helper function untuk spawn thread dengan auto-registration
 function SafeSpawnThread(threadId, callback, description)
     local thread = task.spawn(function()
         local success, err = pcall(callback)
         if not success then
             warn(string.format("[ThreadManager] Thread '%s' (%s) error: %s", threadId, description or "Unknown", tostring(err)))
-        end
-    end)
-    
-    if threadId then
-        ThreadManager:Register(threadId, thread, description)
-    end
-    
-    return thread
-end
-
--- Helper function untuk cancel thread dengan verification (simplified)
-function CancelThread(threadVar, threadId, description)
-    if not threadVar then return true end
-    
-    -- Register jika belum terdaftar
-    if threadId and not ThreadManager.activeThreads[threadId] then
-        ThreadManager:Register(threadId, threadVar, description or "Unknown Thread")
-    end
-    
-    -- Cancel dengan verification
-    local success = ThreadManager:Cancel(threadId or "unknown", false)
-    
-    if success then
-        return true, nil
-    end
-    
-    return false, threadVar
-end
-
--- Helper untuk spawn thread dengan auto-cleanup
-function SpawnThread(threadId, callback, description)
-    local thread = task.spawn(function()
-        local success, err = pcall(callback)
-        if not success then
-            warn(string.format("[ThreadManager] Thread '%s' (%s) error: %s", threadId, description or "Unknown", tostring(err)))
-        else
-            -- Auto unregister ketika thread selesai
-            ThreadManager:Unregister(threadId)
         end
     end)
     
@@ -1770,4 +1713,3 @@ function GetEventGUI()
         return nil
     end
 end
-
