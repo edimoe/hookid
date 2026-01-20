@@ -309,10 +309,10 @@ do
     local selectedTotemName = "Luck Totem"
     local TOTEM_DATA = {
         ["Luck Totem"] = { Id = 1, Duration = 3601 },
-        ["Mutation Totem"] = { Id = 2, Duration = 3601 },
-        ["Shiny Totem"] = { Id = 3, Duration = 3601 },
+        ["Shiny Totem"] = { Id = 2, Duration = 3601 },
+        ["Mutation Totem"] = { Id = 3, Duration = 3601 },
     }
-    local TOTEM_NAMES = { "Luck Totem", "Mutation Totem", "Shiny Totem" }
+    local TOTEM_NAMES = { "Luck Totem", "Shiny Totem", "Mutation Totem" }
 
     local totem = premium:Section({ Title = "Auto Totem", TextSize = 20 })
     TOTEM_STATUS_PARAGRAPH = totem:Paragraph({
