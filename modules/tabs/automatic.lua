@@ -16,6 +16,61 @@ do
 
     local RE_FavoriteItem = GetRemote(RPath, "RE/FavoriteItem")
 
+    -- Shared cache for item name dropdowns (load async to reduce load spike)
+    local itemNameCache = nil
+    local itemNameLoading = false
+    local itemNameDropdowns = {}
+
+    local function BuildItemNameList()
+        local itemNames = {}
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local itemsContainer = ReplicatedStorage:FindFirstChild("Items")
+
+        if not itemsContainer then
+            return {"(Kontainer 'Items' di ReplicatedStorage Tidak Ditemukan)"}
+        end
+
+        for _, itemObject in ipairs(itemsContainer:GetChildren()) do
+            local itemName = itemObject.Name
+
+            if type(itemName) == "string" and #itemName >= 3 then
+                local prefix = itemName:sub(1, 3)
+                if prefix ~= "!!!" then
+                    table.insert(itemNames, itemName)
+                end
+            end
+        end
+
+        table.sort(itemNames)
+
+        if #itemNames == 0 then
+            return {"(Kontainer 'Items' Kosong atau Semua Item '!!!')"}
+        end
+
+        return itemNames
+    end
+
+    local function RegisterItemNameDropdown(dropdown)
+        if not dropdown then return end
+        table.insert(itemNameDropdowns, dropdown)
+        if itemNameCache then
+            pcall(function() dropdown:Refresh(itemNameCache) end)
+        end
+    end
+
+    local function LoadItemNameCacheAsync()
+        if itemNameCache or itemNameLoading then return end
+        itemNameLoading = true
+        task.spawn(function()
+            local list = BuildItemNameList()
+            itemNameCache = list
+            itemNameLoading = false
+            for _, dropdown in ipairs(itemNameDropdowns) do
+                pcall(function() dropdown:Refresh(list) end)
+            end
+        end)
+    end
+
     -- Helper Function: Get Fish/Item Count
     local function GetFishCount()
         local replion = GetPlayerDataReplion()
@@ -181,39 +236,7 @@ do
     
     local favsec = automatic:Section({ Title = "Auto Favorite / Unfavorite", TextSize = 20, })
     
-    -- 1. FUNGSI BARU UNTUK MENGAMBIL SEMUA NAMA ITEM (GLOBAL)
-    local function getAutoFavoriteItemOptions()
-        local itemNames = {}
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local itemsContainer = ReplicatedStorage:FindFirstChild("Items")
-
-        if not itemsContainer then
-            return {"(Kontainer 'Items' di ReplicatedStorage Tidak Ditemukan)"}
-        end
-
-        for _, itemObject in ipairs(itemsContainer:GetChildren()) do
-            local itemName = itemObject.Name
-            
-            if type(itemName) == "string" and #itemName >= 3 then
-                -- Menggunakan string:sub untuk mengecek prefix '!!!'
-                local prefix = itemName:sub(1, 3)
-                
-                if prefix ~= "!!!" then
-                    table.insert(itemNames, itemName)
-                end
-            end
-        end
-
-        table.sort(itemNames)
-        
-        if #itemNames == 0 then
-            return {"(Kontainer 'Items' Kosong atau Semua Item '!!!')"}
-        end
-        
-        return itemNames
-    end
-    
-    local allItemNames = getAutoFavoriteItemOptions()
+    local allItemNames = itemNameCache or {"(Loading...)"}
     
     -- FUNGSI HELPER: Mendapatkan semua item yang memenuhi kriteria (DIFORWARD KE FAVORITE)
     -- GANTI FUNGSI LAMA 'GetItemsToFavorite' DENGAN YANG INI:
@@ -392,6 +415,8 @@ end
         Multi = true, AllowNone = true, Value = false,
         Callback = function(values) selectedItemNames = values or {} end -- Multi select untuk nama
     }))
+    RegisterItemNameDropdown(ItemNameDropdown)
+    LoadItemNameCacheAsync()
 
     local MutationDropdown = Reg("dmut",favsec:Dropdown({
         Title = "by Mutation",
@@ -544,41 +569,10 @@ end
     
     automatic:Divider()
     
-    -- 1. Item Auto-Populate Dropdown (SINGLE SELECT)
-    local function getTradeableItemOptions()
-        local itemNames = {}
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local itemsContainer = ReplicatedStorage:FindFirstChild("Items")
-
-        if not itemsContainer then
-            return {"(Kontainer 'Items' di ReplicatedStorage Tidak Ditemukan)"}
-        end
-
-        for _, itemObject in ipairs(itemsContainer:GetChildren()) do
-            local itemName = itemObject.Name
-            
-            if type(itemName) == "string" and #itemName >= 3 then
-                local prefix = itemName:sub(1, 3)
-                
-                if prefix ~= "!!!" then
-                    table.insert(itemNames, itemName)
-                end
-            end
-        end
-
-        table.sort(itemNames)
-        
-        if #itemNames == 0 then
-            return {"(Kontainer 'Items' Kosong atau Semua Item '!!!')"}
-        end
-        
-        return itemNames
-    end
-
     local ItemNameDropdown
     ItemNameDropdown = trade:Dropdown({
         Title = "Filter Item Name",
-        Values = getTradeableItemOptions(),
+        Values = itemNameCache or {"(Loading...)"},
         Value = false,
         Multi = false,
         AllowNone = true,
@@ -586,6 +580,7 @@ end
             selectedTradeItemName = name or nil -- Set ke nil jika "None"
         end
     })
+    RegisterItemNameDropdown(ItemNameDropdown)
 
     -- 2. Filter Rarity Dropdown (SINGLE SELECT)
     local raretrade = trade:Dropdown({
