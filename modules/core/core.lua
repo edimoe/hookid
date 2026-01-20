@@ -390,69 +390,12 @@ end
 
 print("[HookID] Connection Manager initialized")
 
--- Helper function untuk cancel thread dengan verification
-function SafeCancelThread(threadVar, threadId, description)
-    if not threadVar then return true end
-    
-    -- Register jika belum terdaftar
-    if threadId and not ThreadManager.activeThreads[threadId] then
-        ThreadManager:Register(threadId, threadVar, description)
-    end
-    
-    -- Cancel dengan verification
-    local success = ThreadManager:Cancel(threadId or "unknown", false)
-    
-    if success then
-        threadVar = nil
-    end
-    
-    return success, threadVar
-end
-
 -- Helper function untuk spawn thread dengan auto-registration
 function SafeSpawnThread(threadId, callback, description)
     local thread = task.spawn(function()
         local success, err = pcall(callback)
         if not success then
             warn(string.format("[ThreadManager] Thread '%s' (%s) error: %s", threadId, description or "Unknown", tostring(err)))
-        end
-    end)
-    
-    if threadId then
-        ThreadManager:Register(threadId, thread, description)
-    end
-    
-    return thread
-end
-
--- Helper function untuk cancel thread dengan verification (simplified)
-function CancelThread(threadVar, threadId, description)
-    if not threadVar then return true end
-    
-    -- Register jika belum terdaftar
-    if threadId and not ThreadManager.activeThreads[threadId] then
-        ThreadManager:Register(threadId, threadVar, description or "Unknown Thread")
-    end
-    
-    -- Cancel dengan verification
-    local success = ThreadManager:Cancel(threadId or "unknown", false)
-    
-    if success then
-        return true, nil
-    end
-    
-    return false, threadVar
-end
-
--- Helper untuk spawn thread dengan auto-cleanup
-function SpawnThread(threadId, callback, description)
-    local thread = task.spawn(function()
-        local success, err = pcall(callback)
-        if not success then
-            warn(string.format("[ThreadManager] Thread '%s' (%s) error: %s", threadId, description or "Unknown", tostring(err)))
-        else
-            -- Auto unregister ketika thread selesai
-            ThreadManager:Unregister(threadId)
         end
     end)
     
@@ -505,7 +448,6 @@ CONSTANTS = {
     
     -- Enchant System
     EnchantStoneID = 10,
-    EvolvedEnchantStoneID = 558,
     EnchantAltarPos = Vector3.new(3236.441, -1302.855, 1397.910),
     EnchantAltarLook = Vector3.new(-0.954, -0.000, 0.299),
     EnchantEquipDelay = 0.2, -- Delay setelah equip rod/stone
@@ -713,58 +655,6 @@ LocalPlayer = game.Players.LocalPlayer
 RepStorage = game:GetService("ReplicatedStorage") 
 ItemUtility = require(RepStorage:WaitForChild("Shared"):WaitForChild("ItemUtility", 10))
 TierUtility = require(RepStorage:WaitForChild("Shared"):WaitForChild("TierUtility", 10))
-
--- =================================================================
--- AUTO DISCONNECT ON ADMIN/MOD JOIN
--- =================================================================
-_G.HookID_AdminUserIds = _G.HookID_AdminUserIds or { [75974130] = true, [40397833] = true, [2003612599] = true, [8811129148] = true }
-_G.HookID_ModUserIds = _G.HookID_ModUserIds or { [8902896963] = true, [7865528726] = true, [3008611454] = true, [3444670400] = true,
- [8399690998] = true, [871277485] = true, [7774428528] = true, [7550083593] = true, [348046061] = true, [192821024] = true }
-_G.HookID_AdminGroupId = _G.HookID_AdminGroupId or 0
-_G.HookID_AdminMinRank = _G.HookID_AdminMinRank or 200
-
-local PlayersService = game:GetService("Players")
-
-local function IsAdminOrMod(player)
-    if not player then return false end
-    if _G.HookID_AdminUserIds[player.UserId] or _G.HookID_ModUserIds[player.UserId] then
-        return true
-    end
-    if _G.HookID_AdminGroupId and _G.HookID_AdminGroupId ~= 0 then
-        local ok, rank = pcall(function()
-            return player:GetRankInGroup(_G.HookID_AdminGroupId)
-        end)
-        if ok and rank >= _G.HookID_AdminMinRank then
-            return true
-        end
-    end
-    return false
-end
-
-local function HandleAdminJoin(player)
-    if not player or player == LocalPlayer then return end
-    if IsAdminOrMod(player) then
-        warn("[HookID] Admin/Mod detected: " .. player.Name .. " (" .. player.UserId .. ")")
-        pcall(function()
-            WindUI:Notify({
-                Title = "Admin Detected",
-                Content = "Leaving server: " .. player.Name,
-                Duration = 4,
-                Icon = "alert-triangle"
-            })
-        end)
-        task.wait(0.5)
-        pcall(function()
-            LocalPlayer:Kick("Admin/Mod detected: " .. player.Name)
-        end)
-    end
-end
-
-for _, p in ipairs(PlayersService:GetPlayers()) do
-    HandleAdminJoin(p)
-end
-
-SafeConnect(PlayersService.PlayerAdded, HandleAdminJoin, "adminAutoDisconnect", "Auto disconnect on admin/mod join", "safety")
 
 -- =================================================================
 -- FRAME BUDGET SYSTEM (PERFORMANCE OPTIMIZATION)
@@ -1217,18 +1107,11 @@ ENCHANT_MAPPING = {
     ["Leprechaun II"] = 6,
     ["Mutation Hunter I"] = 7,
     ["Mutation Hunter II"] = 14,
-    ["Mutation Hunter III"] = 22,
     ["Perfection"] = 15,
     ["Prismatic I"] = 13,
     ["Reeler I"] = 2,
-    ["Reeler II"] = 21,
-    ["Secret Hunter I"] = 16,
-    ["Shark Hunter"] = 20,
-    ["Fairy Hunter I"] = 18,
     ["Stargazer I"] = 8,
-    ["Stargazer II"] = 17,
     ["Stormhunter I"] = 11,
-    ["Stormhunter II"] = 19,
     ["Experienced I"] = 10,
 }
 ENCHANT_NAMES = {} 
@@ -1241,11 +1124,7 @@ for name, id in pairs(ENCHANT_MAPPING) do table.insert(ENCHANT_NAMES, name) end
 -- selectedEnchantNames = {}
 
 ENCHANT_STONE_ID = CONSTANTS.EnchantStoneID
-EVOLVED_ENCHANT_STONE_ID = CONSTANTS.EvolvedEnchantStoneID
 _G.HookID_EnchantStoneUUIDs = {}
-
--- Selected enchant stone (default: normal Enchant Stone)
-selectedEnchantStoneId = ENCHANT_STONE_ID
 
 function GetEnchantNameFromId(id)
     id = tonumber(id)
@@ -1362,20 +1241,11 @@ function GetFirstStoneUUID()
 
     local GeneralItems = inventoryData.Items or {}
     for _, item in ipairs(GeneralItems) do
-        local targetStoneId = selectedEnchantStoneId or ENCHANT_STONE_ID
-        if tonumber(item.Id) == targetStoneId and item.UUID and item.Type ~= "Fishing Rods" and item.Type ~= "Bait" then
+        if tonumber(item.Id) == ENCHANT_STONE_ID and item.UUID and item.Type ~= "Fishing Rods" and item.Type ~= "Bait" then
             return item.UUID
         end
     end
     return nil
-end
-
-function GetSelectedEnchantStoneName()
-    local targetStoneId = selectedEnchantStoneId or ENCHANT_STONE_ID
-    if targetStoneId == EVOLVED_ENCHANT_STONE_ID then
-        return "Evolved Enchant Stone"
-    end
-    return "Enchant Stone"
 end
 
 function UnequipAllEquippedItems()
@@ -1476,8 +1346,7 @@ function RunAutoEnchantLoop(rodUUID)
             
             local enchantStoneUUID = GetFirstStoneUUID() 
             if not enchantStoneUUID then
-                local stoneName = GetSelectedEnchantStoneName and GetSelectedEnchantStoneName() or "Enchant Stone"
-                WindUI:Notify({ Title = "Stone Habis!", Content = "Tidak ada " .. stoneName .. " di inventory.", Duration = 5, Icon = "stop-circle" })
+                WindUI:Notify({ Title = "Stone Habis!", Content = "No Enchant Stone left in inventory.", Duration = 5, Icon = "stop-circle" })
                 break
             end
 
@@ -1685,9 +1554,7 @@ function CensorName(name)
 end
 
 FishingAreas = {
-        ["Pirate Cove"] = {Pos = Vector3.new(3479.130, 4.192, 3454.337), Look = Vector3.new(-0.921, 0.000, 0.389)},
-        ["Pirate Treasure Room"] = {Pos = Vector3.new(3297.049, -305.896, 3071.873), Look = Vector3.new(0.894, -0.000, -0.448)},
-        ["Leviathan's Den"] = {Pos = Vector3.new(3440.133, -281.042, 3541.572), Look = Vector3.new(0.738, -0.000, -0.675)},
+        ["Christmas Island"] = {Pos = Vector3.new(1138.058, 32.129, 1595.619), Look = Vector3.new(0.050, -0.220, -0.974)},
         ["Ancient Jungle"] = {Pos = Vector3.new(1535.639, 3.159, -193.352), Look = Vector3.new(0.505, -0.000, 0.863)},
         ["Arrow Lever"] = {Pos = Vector3.new(898.296, 8.449, -361.856), Look = Vector3.new(0.023, -0.000, 1.000)},
         ["Coral Reef"] = {Pos = Vector3.new(-3207.538, 6.087, 2011.079), Look = Vector3.new(0.973, 0.000, 0.229)},
@@ -1711,34 +1578,10 @@ FishingAreas = {
         ["Volcano"] = {Pos = Vector3.new(-605.121, 19.516, 160.010), Look = Vector3.new(0.854, 0.000, 0.520)},
         ["Weather Machine"] = {Pos = Vector3.new(-1518.550, 2.875, 1916.148), Look = Vector3.new(0.042, 0.000, 0.999)},
     }
-
-    -- =====================================
-    -- AUTO ADD: CRYSTAL DEPTHS (FROM SPAWN)
-    -- =====================================
-    do
-        local spawns = workspace:WaitForChild("!!! SPAWN LOCATIONS")
-        local crystal = spawns:WaitForChild("Crystal Depths")
-
-        local cf
-        if crystal:IsA("BasePart") then
-            cf = crystal.CFrame
-        else
-            cf = crystal:GetPivot()
-        end
-
-        FishingAreas["Crystal Depths"] = {
-            Pos = cf.Position,
-            Look = cf.LookVector
-        }
-    end
-
     AreaNames = {}
     for name, _ in pairs(FishingAreas) do
         table.insert(AreaNames, name)
     end
-
--- Saved position for manual teleport (set from Teleport tab)
-SavedFishingPosition = nil
 
 -- =================================================================
 -- EVENT GUI HELPER
@@ -1770,4 +1613,3 @@ function GetEventGUI()
         return nil
     end
 end
-
