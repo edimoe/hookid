@@ -17,9 +17,7 @@ do
     local MainDisplayElement = nil
     local UpdateThread = nil
     
-    -- Variabel Auto Buy Merchant Statis & Dinamis
-    local selectedStaticItemName = nil
-    local autoBuySelectedState = false
+    -- Variabel Auto Buy Merchant Dinamis
     local autoBuyStockState = false
     local autoBuyThread = nil
 
@@ -31,99 +29,8 @@ do
         else return tostring(n) end
     end
 
-    -- Data Item Shop & Merchant Item STATIS (CLEANED)
-    local ShopItems = {
-        ["Rods"] = {
-            {Name = "Luck Rod", ID = 70, Price = 325}, {Name = "Carbon Rod", ID = 76, Price = 750},
-            {Name = "Grass Rod", ID = 85, Price = 1500}, {Name = "Demascus Rod", ID = 77, Price = 3000},
-            {Name = "Ice Rod", ID = 78, Price = 5000}, {Name = "Lucky Rod", ID = 4, Price = 15000},
-            {Name = "Midnight Rod", ID = 80, Price = 50000}, {Name = "Steampunk Rod", ID = 6, Price = 215000},
-            {Name = "Chrome Rod", ID = 7, Price = 437000}, {Name = "Flourescent Rod", ID = 255, Price = 715000},
-            {Name = "Astral Rod", ID = 5, Price = 1000000}, {Name = "Ares Rod", ID = 126, Price = 3000000},
-            {Name = "Angler Rod", ID = 168, Price = 8000000},{Name = "Bamboo Rod", ID = 258, Price = 12000000},
-        },
-        ["Bobbers"] = {
-            {Name = "Floral Bait", ID = 20, Price = 4000000}, {Name = "Aether Bait", ID = 16, Price = 3700000},
-            {Name = "Corrupt Bait", ID = 15, Price = 1148484}, {Name = "Dark Matter Bait", ID = 8, Price = 630000},
-            {Name = "Chroma Bait", ID = 6, Price = 290000}, {Name = "Nature Bait", ID = 17, Price = 83500},
-            {Name = "Midnight Bait", ID = 3, Price = 3000}, {Name = "Luck Bait", ID = 2, Price = 1000},
-            {Name = "Topwater Bait", ID = 10, Price = 100},
-        },
-        ["Boats"] = {
-            {Name = "Mini Yach", ID = 14, Price = 1200000}, {Name = "Fish Boat", ID = 6, Price = 180000},
-            {Name = "Speed Boat", ID = 5, Price = 70000}, {Name = "Highfield Boat", ID = 4, Price = 25000},
-            {Name = "Jetski", ID = 3, Price = 7500}, {Name = "Kayak", ID = 2, Price = 1100},
-            {Name = "Small Boat", ID = 1, Price = 100},
-        },
-    }
-
-    local MerchantStaticItems = {
-        {Name = "Fluorescent Rod", ID = 1, Identifier = "Fluorescent Rod", Price = 685000},
-        {Name = "Hazmat Rod", ID = 2, Identifier = "Hazmat Rod", Price = 1380000},
-        {Name = "Singularity Bait", ID = 3, Identifier = "Singularity Bait", Price = 8200000},
-        {Name = "Royal Bait", ID = 4, Identifier = "Royal Bait", Price = 425000},
-        {Name = "Luck Totem", ID = 5, Identifier = "Luck Totem", Price = 650000},
-        {Name = "Shiny Totem", ID = 7, Identifier = "Shiny Totem", Price = 400000},
-        {Name = "Mutation Totem", ID = 8, Identifier = "Mutation Totem", Price = 800000}
-    }
-    
-
     -- Remote Functions & Data (diambil dari Global Scope)
-    local RF_PurchaseBait = GetRemote(RPath, "RF/PurchaseBait", 5)
-    local RF_PurchaseFishingRod = GetRemote(RPath, "RF/PurchaseFishingRod", 5)
-    local RF_PurchaseBoat = GetRemote(RPath, "RF/PurchaseBoat", 5)
     local RF_PurchaseMarketItem = GetRemote(RPath, "RF/PurchaseMarketItem", 5)
-    local ShopRemotes = {
-        ["Rods"] = RF_PurchaseFishingRod, ["Bobbers"] = RF_PurchaseBait, ["Boats"] = RF_PurchaseBoat,
-    }
-
-    -- FUNGSI UNTUK DROPDOWN STATIS (CLEANED)
-    local function GetStaticMerchantOptions()
-        local options = {}
-        for _, item in ipairs(MerchantStaticItems) do
-            local formattedPrice = FormatNumber(item.Price)
-            -- HANYA MENAMPILKAN HARGA TANPA JENIS MATA UANG
-            table.insert(options, string.format("%s (%s)", item.Name, formattedPrice))
-        end
-        return options
-    end
-
-    -- (Fungsi Helper lainnya)
-    local function GetStaticMerchantItemID(dropdownValue)
-        for _, item in ipairs(MerchantStaticItems) do
-            if dropdownValue:match("^" .. item.Name:gsub("%%", "%%%%") .. " ") then
-                return item.ID, item.Name
-            end
-        end
-        return nil, nil
-    end
-
-    local function getDropdownOptions(itemType)
-        local options = {}
-        for _, item in ipairs(ShopItems[itemType]) do
-            local formattedPrice = FormatNumber(item.Price)
-            table.insert(options, string.format("%s (%s)", item.Name, formattedPrice))
-        end
-        return options
-    end
-    local function getItemID(itemType, dropdownValue)
-        local itemName = dropdownValue:match("^([^%s]+%s[^%s]+)")
-        if not itemName then itemName = dropdownValue:match("^[^%s]+") end
-        for _, item in ipairs(ShopItems[itemType]) do
-            if item.Name == itemName then return item.ID end
-        end
-        return nil
-    end
-    local function handlePurchase(itemType, selectedValue)
-        local itemID = getItemID(itemType, selectedValue)
-        local remote = ShopRemotes[itemType]
-        if not remote or not itemID then
-            WindUI:Notify({ Title = "Purchase Error",Duration = 4, Icon = "x", })
-            return
-        end
-        pcall(function() remote:InvokeServer(itemID) end)
-        WindUI:Notify({ Title = "Purchase Attempted!", Duration = 3, Icon = "check", })
-    end
     
     local function GetReplions()
         if MerchantReplion then return true end
@@ -272,19 +179,6 @@ do
         end)
     end
 
-    -- ￰ﾟﾒﾡ FUNGSI AUTO BUY STATIS (Selected Item)
-    local function RunAutoBuySelectedLoop(itemID, itemName)
-        if autoBuyThread then task.cancel(autoBuyThread) end
-
-        autoBuyThread = task.spawn(function()
-            while autoBuySelectedState do
-                BuyMerchantItem(itemID, itemName)
-                task.wait(1)
-            end
-        end)
-    end
-
-
     local function RunMerchantSyncLoop(mainDisplay)
         if UpdateThread then task.cancel(UpdateThread) end
 
@@ -395,10 +289,6 @@ do
             autoBuyStockState = state
             if state then
                 RunAutoBuyStockLoop()
-                if autoBuySelectedState then
-                    autoBuySelectedState = false
-                    shop:GetElementByTitle("Auto Buy Selected Items"):Set(false)
-                end
             else
                 if autoBuyThread then task.cancel(autoBuyThread) autoBuyThread = nil end
             end
