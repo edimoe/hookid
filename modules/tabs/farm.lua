@@ -99,6 +99,15 @@ do
             pcall(function() if RF_UpdateAutoFishingState then RF_UpdateAutoFishingState:InvokeServer(false) end end)
         end
     end
+
+    local function IsRodEquipped()
+        local character = LocalPlayer.Character
+        if not character then
+            return false
+        end
+        local tool = character:FindFirstChildOfClass("Tool")
+        return tool and tool.Name:find("Rod") or false
+    end
     
     -- ===================================================================
     -- LOGIKA BARU UNTUK AUTO FISH LEGIT
@@ -242,9 +251,21 @@ do
             if state then
                 if legitEquipThread then task.cancel(legitEquipThread) end
                 legitEquipThread = task.spawn(function()
+                    local missingCount = 0
+                    local lastEquipAttempt = 0
+                    local equipCooldown = 0.6
                     while legitAutoState do
-                        pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
-                        task.wait(0.1) -- Delay spam 0.1 detik
+                        if IsRodEquipped() then
+                            missingCount = 0
+                        else
+                            missingCount = missingCount + 1
+                        end
+                        if missingCount >= 5 and (os.clock() - lastEquipAttempt) >= equipCooldown then
+                            lastEquipAttempt = os.clock()
+                            pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
+                            missingCount = 0
+                        end
+                        task.wait(0.1) -- Check interval
                     end
                 end)
             else
@@ -310,9 +331,21 @@ do
                 -- THREAD 2: Background Auto Equip (Anti-Stuck)
                 if normalEquipThread then task.cancel(normalEquipThread) end
                 normalEquipThread = task.spawn(function()
+                    local missingCount = 0
+                    local lastEquipAttempt = 0
+                    local equipCooldown = 0.6
                     while normalInstantState do
-                        pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
-                        task.wait(0.1) -- Delay spam 0.1 detik
+                        if IsRodEquipped() then
+                            missingCount = 0
+                        else
+                            missingCount = missingCount + 1
+                        end
+                        if missingCount >= 5 and (os.clock() - lastEquipAttempt) >= equipCooldown then
+                            lastEquipAttempt = os.clock()
+                            pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
+                            missingCount = 0
+                        end
+                        task.wait(0.1) -- Check interval
                     end
                 end)
                 
@@ -682,11 +715,4 @@ do
     }))
 
 end
-
-
-
-
-
-
-
 
