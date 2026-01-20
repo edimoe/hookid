@@ -301,6 +301,27 @@ do
     premium:Divider()
 
     -- =================================================================
+    -- AUTO TOTEM
+    -- =================================================================
+    local AUTO_TOTEM_ACTIVE = false
+    local AUTO_TOTEM_THREAD = nil
+    local currentTotemExpiry = 0
+    local selectedTotemName = "Luck Totem"
+    local TOTEM_DATA = {
+        ["Luck Totem"] = { Id = 1, Duration = 3601 },
+        ["Mutation Totem"] = { Id = 3, Duration = 3601 },
+        ["Shiny Totem"] = { Id = 2, Duration = 3601 },
+    }
+    local TOTEM_NAMES = { "Luck Totem", "Shiny Totem", "Mutation Totem" }
+
+    local totem = premium:Section({ Title = "Auto Totem", TextSize = 20 })
+    TOTEM_STATUS_PARAGRAPH = totem:Paragraph({
+        Title = "Totem Status",
+        Content = "Status: OFF",
+        Icon = "timer"
+    })
+
+    -- =================================================================
     -- HELPER
     -- =================================================================
     local function GetTotemUUID(name)
@@ -320,6 +341,12 @@ do
         if AUTO_TOTEM_THREAD then task.cancel(AUTO_TOTEM_THREAD) end
         AUTO_TOTEM_THREAD = task.spawn(function()
             while AUTO_TOTEM_ACTIVE do
+                local totemData = TOTEM_DATA[selectedTotemName]
+                if not totemData then
+                    TOTEM_STATUS_PARAGRAPH:SetDesc("Invalid totem selected.")
+                    task.wait(1)
+                    continue
+                end
                 local timeLeft = currentTotemExpiry - os.time()
                 if timeLeft > 0 then
                     local m = math.floor((timeLeft % 3600) / 60); local s = math.floor(timeLeft % 60)
@@ -329,7 +356,7 @@ do
                     local uuid = GetTotemUUID(selectedTotemName)
                     if uuid then
                         pcall(function() RE_SpawnTotem:FireServer(uuid) end)
-                        currentTotemExpiry = os.time() + TOTEM_DATA[selectedTotemName].Duration
+                        currentTotemExpiry = os.time() + totemData.Duration
                         task.spawn(function() for i=1,3 do task.wait(0.2) pcall(function() RE_EquipToolFromHotbar:FireServer(1) end) end end)
                     end
                 end
