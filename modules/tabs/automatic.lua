@@ -5,14 +5,6 @@ do
         Locked = false,
     })
 
-    -- Variabel untuk Auto Sell
-    local sellDelay = 50
-    local autoSellDelayState = false
-    local autoSellDelayThread = nil
-    local sellCount = 50
-    local autoSellCountState = false
-    local autoSellCountThread = nil
-
     -- Variabel Auto Favorite/Unfavorite
     local autoFavoriteState = false
     local autoFavoriteThread = nil
@@ -63,68 +55,6 @@ do
         
         return totalFishCount
     end
-
-    -- Helper Function: Menonaktifkan mode Auto Sell lain
-    local function disableOtherAutoSell(currentMode)
-        if currentMode ~= "delay" and autoSellDelayState then
-            autoSellDelayState = false
-            local toggle = automatic:GetElementByTitle("Auto Sell All (Delay)")
-            if toggle and toggle.Set then toggle:Set(false) end
-            if autoSellDelayThread then 
-                ThreadManager:Cancel("autoSellDelayThread", false)
-                autoSellDelayThread = nil
-            end
-        end
-        if currentMode ~= "count" and autoSellCountState then
-            autoSellCountState = false
-            local toggle = automatic:GetElementByTitle("Auto Sell by Count")
-            if toggle and toggle.Set then toggle:Set(false) end
-            if autoSellCountThread then 
-                ThreadManager:Cancel("autoSellCountThread", false)
-                autoSellCountThread = nil
-            end
-        end
-    end
-
-    -- LOGIC AUTO SELL BY DELAY
-    local function RunAutoSellDelayLoop()
-        if autoSellDelayThread then 
-            ThreadManager:Cancel("autoSellDelayThread", false)
-            autoSellDelayThread = nil
-        end
-        autoSellDelayThread = SafeSpawnThread("autoSellDelayThread", function()
-            while autoSellDelayState do
-                if RF_SellAllItems then
-                    pcall(function() RF_SellAllItems:InvokeServer() end)
-                end
-                task.wait(math.max(sellDelay, CONSTANTS.AutoSellCheckInterval))
-            end
-            ThreadManager:Unregister("autoSellDelayThread")
-        end, "Auto Sell Delay Thread")
-    end
-    
-    -- LOGIC AUTO SELL BY COUNT
-    local function RunAutoSellCountLoop()
-        if autoSellCountThread then 
-            ThreadManager:Cancel("autoSellCountThread", false)
-            autoSellCountThread = nil
-        end
-        autoSellCountThread = SafeSpawnThread("autoSellCountThread", function()
-            while autoSellCountState do
-                local currentCount = GetFishCount()
-                
-                if currentCount >= sellCount then
-                    if RF_SellAllItems then
-                        pcall(function() RF_SellAllItems:InvokeServer() end)
-                        task.wait(CONSTANTS.AutoSellCooldown)
-                    end
-                end
-                task.wait(CONSTANTS.AutoSellCheckInterval)
-            end
-            ThreadManager:Unregister("autoSellCountThread")
-        end, "Auto Sell Count Thread")
-    end
-
 
    -- =================================================================
     -- ￰ﾟﾒﾰ UNIFIED AUTO SELL SYSTEM (BY DELAY / BY COUNT)
@@ -218,14 +148,11 @@ do
     local CurrentCountDisplay = sellall:Paragraph({ Title = "Current Fish Count: 0", Icon = "package" })
     task.spawn(function() 
         while true do 
-            local shouldUpdate = autoSellState or autoSellMethod == "Count"
-            if shouldUpdate and CurrentCountDisplay and GetPlayerDataReplion() then 
+            if CurrentCountDisplay and GetPlayerDataReplion() then 
                 local count = GetFishCount() 
                 CurrentCountDisplay:SetTitle("Current Fish Count: " .. tostring(count)) 
-                task.wait(1) 
-            else 
-                task.wait(5) 
-            end
+            end 
+            task.wait(1) 
         end 
     end)
 
@@ -286,15 +213,7 @@ do
         return itemNames
     end
     
-    local cachedItemNames = {"(Loading...)"}
-    local function RefreshItemNameOptions(dropdown)
-        local names = getAutoFavoriteItemOptions()
-        if #names == 0 then
-            names = {"(No items found)"}
-        end
-        cachedItemNames = names
-        pcall(function() dropdown:Refresh(names) end)
-    end
+    local allItemNames = getAutoFavoriteItemOptions()
     
     -- FUNGSI HELPER: Mendapatkan semua item yang memenuhi kriteria (DIFORWARD KE FAVORITE)
     -- GANTI FUNGSI LAMA 'GetItemsToFavorite' DENGAN YANG INI:
@@ -467,22 +386,12 @@ end
         Callback = function(values) selectedRarities = values or {} end
     }))
 
-    local favItemNameDropdown = Reg("dtem",favsec:Dropdown({
+    local ItemNameDropdown = Reg("dtem",favsec:Dropdown({
         Title = "by Item Name",
-        Values = cachedItemNames,
+        Values = allItemNames, -- Menggunakan daftar nama item universal
         Multi = true, AllowNone = true, Value = false,
         Callback = function(values) selectedItemNames = values or {} end -- Multi select untuk nama
     }))
-    
-    favsec:Button({
-        Title = "Refresh Item List",
-        Icon = "refresh-ccw",
-        Callback = function()
-            RefreshItemNameOptions(favItemNameDropdown)
-            pcall(function() favItemNameDropdown:Set(false) end)
-            selectedItemNames = {}
-        end
-    })
 
     local MutationDropdown = Reg("dmut",favsec:Dropdown({
         Title = "by Mutation",
@@ -635,25 +544,46 @@ end
     
     automatic:Divider()
     
-    local tradeItemNameDropdown
-    tradeItemNameDropdown = trade:Dropdown({
+    -- 1. Item Auto-Populate Dropdown (SINGLE SELECT)
+    local function getTradeableItemOptions()
+        local itemNames = {}
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local itemsContainer = ReplicatedStorage:FindFirstChild("Items")
+
+        if not itemsContainer then
+            return {"(Kontainer 'Items' di ReplicatedStorage Tidak Ditemukan)"}
+        end
+
+        for _, itemObject in ipairs(itemsContainer:GetChildren()) do
+            local itemName = itemObject.Name
+            
+            if type(itemName) == "string" and #itemName >= 3 then
+                local prefix = itemName:sub(1, 3)
+                
+                if prefix ~= "!!!" then
+                    table.insert(itemNames, itemName)
+                end
+            end
+        end
+
+        table.sort(itemNames)
+        
+        if #itemNames == 0 then
+            return {"(Kontainer 'Items' Kosong atau Semua Item '!!!')"}
+        end
+        
+        return itemNames
+    end
+
+    local ItemNameDropdown
+    ItemNameDropdown = trade:Dropdown({
         Title = "Filter Item Name",
-        Values = cachedItemNames,
+        Values = getTradeableItemOptions(),
         Value = false,
         Multi = false,
         AllowNone = true,
         Callback = function(name)
             selectedTradeItemName = name or nil -- Set ke nil jika "None"
-        end
-    })
-    
-    trade:Button({
-        Title = "Refresh Item List",
-        Icon = "refresh-ccw",
-        Callback = function()
-            RefreshItemNameOptions(tradeItemNameDropdown)
-            pcall(function() tradeItemNameDropdown:Set(false) end)
-            selectedTradeItemName = nil
         end
     })
 
@@ -978,7 +908,7 @@ end
         {Name = "Midnight Rod", ID = 80}, {Name = "Steampunk Rod", ID = 6}, {Name = "Chrome Rod", ID = 7}, 
         {Name = "Flourescent Rod", ID = 255}, {Name = "Astral Rod", ID = 5}, {Name = "Ares Rod", ID = 126}, 
         {Name = "Angler Rod", ID = 168}, {Name = "Ghostfin Rod", ID = 169}, {Name = "Element Rod", ID = 257},
-        {Name = "Hazmat Rod", ID = 256}, {Name = "Bamboo Rod", ID = 258}, {Name = "Diamond Rod", ID = 559}
+        {Name = "Hazmat Rod", ID = 256}, {Name = "Bamboo Rod", ID = 258}
     }
 
     local function GetHardcodedRodNames()
@@ -1065,23 +995,6 @@ end
         AllowNone = false,
         Callback = function(names)
             selectedEnchantNames = names or {}
-        end
-    })
-
-    -- Pilih jenis batu enchant yang dipakai
-    local EnchantStoneDropdown = enchant:Dropdown({
-        Title = "Select Enchant Stone",
-        Desc = "Pilih batu enchant yang akan digunakan.",
-        Values = {"Enchant Stone", "Evolved Enchant Stone"},
-        Multi = false,
-        AllowNone = false,
-        Value = "Enchant Stone",
-        Callback = function(option)
-            if option == "Evolved Enchant Stone" then
-                selectedEnchantStoneId = EVOLVED_ENCHANT_STONE_ID or 558
-            else
-                selectedEnchantStoneId = ENCHANT_STONE_ID or 10
-            end
         end
     })
 
@@ -1187,8 +1100,7 @@ end
         return options, uuidMap
     end
 
-    local secretFishOptions = {"(Click Refresh)"}
-    local secretFishUUIDMap = {}
+    local secretFishOptions, secretFishUUIDMap = GetSecretFishOptions()
 
     -- --- HELPER: CEK ENCHANT ID 2 (KHUSUS SECOND ENCHANT) ---
     local function CheckIfSecondEnchantReached(rodUUID)
@@ -1420,12 +1332,6 @@ end
         Callback = function(state)
             makeStoneState = state
             if state then
-                if #secretFishOptions <= 1 then
-                    local newOptions, newMap = GetSecretFishOptions()
-                    secretFishOptions = newOptions
-                    secretFishUUIDMap = newMap
-                    pcall(function() SecretFishDropdown:Refresh(newOptions) end)
-                end
                 if #selectedSecretFishUUIDs == 0 then
                     WindUI:Notify({ Title = "Error", Content = "Select at least 1 secret fish.", Duration = 3, Icon = "alert-triangle" })
                     return false
@@ -1638,4 +1544,3 @@ end
     }))
     
 end
-
