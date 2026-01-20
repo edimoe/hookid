@@ -5,14 +5,6 @@ do
         Locked = false,
     })
 
-    -- Variabel untuk Auto Sell
-    local sellDelay = 50
-    local autoSellDelayState = false
-    local autoSellDelayThread = nil
-    local sellCount = 50
-    local autoSellCountState = false
-    local autoSellCountThread = nil
-
     -- Variabel Auto Favorite/Unfavorite
     local autoFavoriteState = false
     local autoFavoriteThread = nil
@@ -63,68 +55,6 @@ do
         
         return totalFishCount
     end
-
-    -- Helper Function: Menonaktifkan mode Auto Sell lain
-    local function disableOtherAutoSell(currentMode)
-        if currentMode ~= "delay" and autoSellDelayState then
-            autoSellDelayState = false
-            local toggle = automatic:GetElementByTitle("Auto Sell All (Delay)")
-            if toggle and toggle.Set then toggle:Set(false) end
-            if autoSellDelayThread then 
-                ThreadManager:Cancel("autoSellDelayThread", false)
-                autoSellDelayThread = nil
-            end
-        end
-        if currentMode ~= "count" and autoSellCountState then
-            autoSellCountState = false
-            local toggle = automatic:GetElementByTitle("Auto Sell by Count")
-            if toggle and toggle.Set then toggle:Set(false) end
-            if autoSellCountThread then 
-                ThreadManager:Cancel("autoSellCountThread", false)
-                autoSellCountThread = nil
-            end
-        end
-    end
-
-    -- LOGIC AUTO SELL BY DELAY
-    local function RunAutoSellDelayLoop()
-        if autoSellDelayThread then 
-            ThreadManager:Cancel("autoSellDelayThread", false)
-            autoSellDelayThread = nil
-        end
-        autoSellDelayThread = SafeSpawnThread("autoSellDelayThread", function()
-            while autoSellDelayState do
-                if RF_SellAllItems then
-                    pcall(function() RF_SellAllItems:InvokeServer() end)
-                end
-                task.wait(math.max(sellDelay, CONSTANTS.AutoSellCheckInterval))
-            end
-            ThreadManager:Unregister("autoSellDelayThread")
-        end, "Auto Sell Delay Thread")
-    end
-    
-    -- LOGIC AUTO SELL BY COUNT
-    local function RunAutoSellCountLoop()
-        if autoSellCountThread then 
-            ThreadManager:Cancel("autoSellCountThread", false)
-            autoSellCountThread = nil
-        end
-        autoSellCountThread = SafeSpawnThread("autoSellCountThread", function()
-            while autoSellCountState do
-                local currentCount = GetFishCount()
-                
-                if currentCount >= sellCount then
-                    if RF_SellAllItems then
-                        pcall(function() RF_SellAllItems:InvokeServer() end)
-                        task.wait(CONSTANTS.AutoSellCooldown)
-                    end
-                end
-                task.wait(CONSTANTS.AutoSellCheckInterval)
-            end
-            ThreadManager:Unregister("autoSellCountThread")
-        end, "Auto Sell Count Thread")
-    end
-
 
    -- =================================================================
     -- ￰ﾟﾒﾰ UNIFIED AUTO SELL SYSTEM (BY DELAY / BY COUNT)
