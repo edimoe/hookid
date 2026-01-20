@@ -418,6 +418,16 @@ end
     }))
     RegisterItemNameDropdown(ItemNameDropdown)
     LoadItemNameCacheAsync()
+    
+    local RefreshItemNamesButton = favsec:Button({
+        Title = "Refresh Item Names",
+        Icon = "refresh-ccw",
+        Callback = function()
+            itemNameCache = nil
+            itemNameLoading = false
+            LoadItemNameCacheAsync()
+        end
+    })
 
     local MutationDropdown = Reg("dmut",favsec:Dropdown({
         Title = "by Mutation",
@@ -583,6 +593,16 @@ end
         end
     })
     RegisterItemNameDropdown(ItemNameDropdown)
+    
+    local RefreshTradeItemNamesButton = trade:Button({
+        Title = "Refresh Item Names",
+        Icon = "refresh-ccw",
+        Callback = function()
+            itemNameCache = nil
+            itemNameLoading = false
+            LoadItemNameCacheAsync()
+        end
+    })
 
     -- 2. Filter Rarity Dropdown (SINGLE SELECT)
     local raretrade = trade:Dropdown({
