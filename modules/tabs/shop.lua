@@ -17,9 +17,7 @@ do
     local MainDisplayElement = nil
     local UpdateThread = nil
     
-    -- Variabel Auto Buy Merchant Statis & Dinamis
-    local selectedStaticItemName = nil
-    local autoBuySelectedState = false
+    -- Variabel Auto Buy Merchant Dinamis
     local autoBuyStockState = false
     local autoBuyThread = nil
 
@@ -272,19 +270,6 @@ do
         end)
     end
 
-    -- ￰ﾟﾒﾡ FUNGSI AUTO BUY STATIS (Selected Item)
-    local function RunAutoBuySelectedLoop(itemID, itemName)
-        if autoBuyThread then task.cancel(autoBuyThread) end
-
-        autoBuyThread = task.spawn(function()
-            while autoBuySelectedState do
-                BuyMerchantItem(itemID, itemName)
-                task.wait(1)
-            end
-        end)
-    end
-
-
     local function RunMerchantSyncLoop(mainDisplay)
         if UpdateThread then task.cancel(UpdateThread) end
 
@@ -395,10 +380,6 @@ do
             autoBuyStockState = state
             if state then
                 RunAutoBuyStockLoop()
-                if autoBuySelectedState then
-                    autoBuySelectedState = false
-                    shop:GetElementByTitle("Auto Buy Selected Items"):Set(false)
-                end
             else
                 if autoBuyThread then task.cancel(autoBuyThread) autoBuyThread = nil end
             end
