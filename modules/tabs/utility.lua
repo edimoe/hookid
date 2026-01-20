@@ -38,22 +38,51 @@ local tfishradar = misc:Toggle({
 local RF_EquipOxygenTank = GetRemote(RPath, "RF/EquipOxygenTank")
 local RF_UnequipOxygenTank = GetRemote(RPath, "RF/UnequipOxygenTank")
 
-local ttank = Reg("infox", misc:Toggle({
+local oxygenTankOptions = {
+    ["Oxygen Tank"] = 105,
+    ["Advanced Oxygen Tank"] = 575,
+}
+local selectedOxygenTankName = "Oxygen Tank"
+local selectedOxygenTankId = oxygenTankOptions[selectedOxygenTankName]
+local ttank = nil
+
+local function EquipSelectedOxygenTank()
+    if not RF_EquipOxygenTank then
+        WindUI:Notify({ Title = "Error", Duration = 3, Icon = "x" })
+        return false
+    end
+    pcall(function()
+        RF_EquipOxygenTank:InvokeServer(selectedOxygenTankId or 105)
+    end)
+    WindUI:Notify({ Title = "Oxygen Tank Equipped", Content = selectedOxygenTankName .. " equipped.", Duration = 3, Icon = "check" })
+    return true
+end
+
+local tankDropdown = Reg("oxygentank", misc:Dropdown({
+    Title = "Oxygen Tank Type",
+    Values = {"Oxygen Tank", "Advanced Oxygen Tank"},
+    Value = selectedOxygenTankName,
+    Multi = false,
+    AllowNone = false,
+    Callback = function(option)
+        if oxygenTankOptions[option] then
+            selectedOxygenTankName = option
+            selectedOxygenTankId = oxygenTankOptions[option]
+            if ttank and ttank.Value then
+                EquipSelectedOxygenTank()
+            end
+        end
+    end
+}))
+
+ttank = Reg("infox", misc:Toggle({
     Title = "Equip Oxygen Tank",
     Desc = "infinite oxygen",
     Value = false,
     Icon = "life-buoy",
     Callback = function(state)
         if state then
-            if not RF_EquipOxygenTank then
-                WindUI:Notify({ Title = "Error", Duration = 3, Icon = "x" })
-                return false
-            end
-            
-            pcall(function()
-                RF_EquipOxygenTank:InvokeServer(105) -- ID 105 untuk Oxygen Tank
-            end)
-            WindUI:Notify({ Title = "Oxygen Tank Equipped", Content = "Oxygen Tank equipped.", Duration = 3, Icon = "check" })
+            EquipSelectedOxygenTank()
         else
             if not RF_UnequipOxygenTank then
                 WindUI:Notify({ Title = "Error", Duration = 3, Icon = "x" })
@@ -68,7 +97,6 @@ local ttank = Reg("infox", misc:Toggle({
     end
 }))
 
-local REObtainedNewFishNotification = GetRemote(RPath, "RE/ObtainedNewFishNotification")
 local RunService = game:GetService("RunService")
 
 local notif = Reg("togglenot",misc:Toggle({
