@@ -3,6 +3,13 @@
     Loads modules one by one using coroutines to reduce freeze
 ]]
 
+-- Prevent double-loading in the same session
+if _G.HookID_LoaderStarted then
+    warn("[HookID] Loader already started, skipping duplicate load.")
+    return
+end
+_G.HookID_LoaderStarted = true
+
 local MODULE_BASE_URL = "https://raw.githubusercontent.com/edimoe/hookid/refs/heads/main/"
 local MODULE_LOAD_DELAY = 0.25
 local MODULE_PREP_YIELD = 0.03
