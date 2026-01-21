@@ -291,19 +291,30 @@ do
     }))
 
     -- Fungsi Utama Mancing (Looping Action)
+    local lastNormalSuccess = 0
+    local lastNormalRecovery = 0
     local function runNormalInstant()
         if not normalInstantState then return end
         if not checkFishingRemotes(true) then normalInstantState = false return end
         
         local timestamp = os.time() + os.clock()
-        pcall(function() RF_ChargeFishingRod:InvokeServer(timestamp) end)
-        pcall(function() RF_RequestFishingMinigameStarted:InvokeServer(-139.630452165, 0.99647927980797) end)
+        local chargeOk = pcall(function() RF_ChargeFishingRod:InvokeServer(timestamp) end)
+        local castOk = pcall(function() RF_RequestFishingMinigameStarted:InvokeServer(-139.630452165, 0.99647927980797) end)
+        if not chargeOk or not castOk then
+            return false
+        end
         
         task.wait(normalCompleteDelay)
         
-        pcall(function() RE_FishingCompleted:FireServer() end)
+        local completeOk = pcall(function() RE_FishingCompleted:FireServer() end)
         task.wait(0.3)
         pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+        
+        if completeOk then
+            lastNormalSuccess = os.clock()
+            return true
+        end
+        return false
     end
 
     local normalins = Reg("tognorm",normalSection:Toggle({
@@ -318,7 +329,23 @@ do
                 -- THREAD 1: Logic Mancing Utama
                 normalLoopThread = SafeSpawnThread("normalLoopThread", function()
                     while normalInstantState do
-                        runNormalInstant()
+                        local ok = runNormalInstant()
+                        local now = os.clock()
+                        if not ok then
+                            -- Anti-stuck recovery with cooldown to keep recv stable
+                            if now - lastNormalRecovery >= 6 then
+                                lastNormalRecovery = now
+                                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+                                pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
+                            end
+                        elseif now - lastNormalSuccess > 20 then
+                            -- If no success for a while, force a light reset
+                            if now - lastNormalRecovery >= 6 then
+                                lastNormalRecovery = now
+                                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+                                pcall(function() RE_EquipToolFromHotbar:FireServer(1) end)
+                            end
+                        end
                         task.wait(CONSTANTS.NormalFishingDelay)
                     end
                     ThreadManager:Unregister("normalLoopThread")
@@ -704,8 +731,4 @@ do
     }))
 
 end
-
-
-
-
 
