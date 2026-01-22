@@ -309,20 +309,20 @@ do
             local isUserFilterMatch = shouldNotify(fishRarityUpper, metadata, fishName)
 
             if isWebhookEnabled and WEBHOOK_URL ~= "" and isUserFilterMatch then
-                local title_private = string.format("<:TEXTURENOBG:1438662703722790992> HookID | Webhook\n\n<a:ChipiChapa:1438661193857503304> New Fish Caught! (%s)", fishName)
+                local title_private = string.format("<:1438662703722790992> HookID | Webhook\n\n<a:ChipiChapa:1438661193857503304> New Fish Caught! (%s)", fishName)
                 
                 local embed = {
                     title = title_private,
                     description = string.format("Found by **%s**.", LocalPlayer.DisplayName or LocalPlayer.Name),
                     color = getRarityColor(fishRarityUpper),
                     fields = {
-                        { name = "<a:ARROW:1438758883203223605> Fish Name", value = string.format("`%s`", fishName), inline = true },
-                        { name = "<a:ARROW:1438758883203223605> Rarity", value = string.format("`%s`", fishRarityUpper), inline = true },
-                        { name = "<a:ARROW:1438758883203223605> Weight", value = string.format("`%s`", fishWeight), inline = true },
+                        { name = "<a:1438758883203223605> Fish Name", value = string.format("`%s`", fishName), inline = true },
+                        { name = "<a:1438758883203223605> Rarity", value = string.format("`%s`", fishRarityUpper), inline = true },
+                        { name = "<a:1438758883203223605> Weight", value = string.format("`%s`", fishWeight), inline = true },
                         
-                        { name = "<a:ARROW:1438758883203223605> Mutation", value = string.format("`%s`", mutationDisplay), inline = true },
-                        { name = "<a:coines:1438758976992051231> Sell Price", value = string.format("`%s`", formattedSellPrice), inline = true },
-                        { name = "<a:coines:1438758976992051231> Current Coins", value = string.format("`%s`", formattedCoins), inline = true },
+                        { name = "<a:1438758883203223605> Mutation", value = string.format("`%s`", mutationDisplay), inline = true },
+                        { name = "<a:1438758976992051231> Sell Price", value = string.format("`%s`", formattedSellPrice), inline = true },
+                        { name = "<a:1438758976992051231> Current Coins", value = string.format("`%s`", formattedCoins), inline = true },
                     },
                     thumbnail = { url = imageUrl },
                     footer = {
@@ -347,16 +347,16 @@ do
                 local playerName = LocalPlayer.DisplayName or LocalPlayer.Name
                 local censoredPlayerName = CensorName(playerName)
                 
-                local title_global = string.format("<:TEXTURENOBG:1438662703722790992> HookID | Global Tracker\n\n<a:globe:1438758633151266818> GLOBAL CATCH! %s", fishName)
+                local title_global = string.format("<:1438662703722790992> HookID | Global Tracker\n\n<a:1438758633151266818> GLOBAL CATCH! %s", fishName)
 
                 local globalEmbed = {
                     title = title_global,
                     description = string.format("Player **%s** just caught fish **%s**!", censoredPlayerName, fishRarityUpper),
                     color = getRarityColor(fishRarityUpper),
                     fields = {
-                        { name = "<a:ARROW:1438758883203223605> Rarity", value = string.format("`%s`", fishRarityUpper), inline = true },
-                        { name = "<a:ARROW:1438758883203223605> Weight", value = string.format("`%s`", fishWeight), inline = true },
-                        { name = "<a:ARROW:1438758883203223605> Mutation", value = string.format("`%s`", mutationDisplay), inline = true },
+                        { name = "<a:1438758883203223605> Rarity", value = string.format("`%s`", fishRarityUpper), inline = true },
+                        { name = "<a:1438758883203223605> Weight", value = string.format("`%s`", fishWeight), inline = true },
+                        { name = "<a:1438758883203223605> Mutation", value = string.format("`%s`", mutationDisplay), inline = true },
                     },
                     thumbnail = { url = imageUrl },
                     footer = {
