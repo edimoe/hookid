@@ -6,7 +6,7 @@ do
     })
 
     about:Section({
-        Title = "Join Discord Server HookID",
+        Title = "Join Discord Server HookIDx",
         TextSize = 20,
     })
 
@@ -44,7 +44,7 @@ do
 
     about:Paragraph({
         Title = "Version 1.0.0",
-        Desc = "- 04 Dec 2025 Release Premium Version",
+        Desc = "- 22 Jan 2026 Release Freemium Version",
     })
 end
 
