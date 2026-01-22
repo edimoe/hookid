@@ -12,7 +12,7 @@ Window = WindUI:CreateWindow({
     Resizable = true,
     SideBarWidth = 65,
     BackgroundImageTransparency = 0.94,
-    BackgroundImage = "rbxassetid://5553946656",
+    BackgroundImage = "rbxassetid://89525545448838",
     ToggleKey = Enum.KeyCode.End,
     HideSearchBar = true,
     ScrollBarEnabled = true,
@@ -1713,6 +1713,7 @@ function GetEventGUI()
         return nil
     end
 end
+
 
 
 
