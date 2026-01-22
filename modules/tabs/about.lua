@@ -106,13 +106,10 @@ local function CreateFloatingIcon()
     FrameCorner.CornerRadius = UDim.new(0, 16) 
     FrameCorner.Parent = FloatingFrame
 
-    -- Anchor Icon
-    local IconLabel = Instance.new("TextLabel")
+    -- Floating Icon (Image)
+    local IconLabel = Instance.new("ImageLabel")
     IconLabel.Name = "Icon"
-    IconLabel.Text = "￢ﾚﾓ"
-    IconLabel.Font = Enum.Font.GothamBlack
-    IconLabel.TextSize = 26
-    IconLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    IconLabel.Image = "rbxassetid://89525545448838"
     IconLabel.BackgroundTransparency = 1
     IconLabel.Size = UDim2.new(1, 0, 1, 0)
     IconLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -230,4 +227,3 @@ task.spawn(function()
     
 end)
 InitializeIcon()
-
