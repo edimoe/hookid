@@ -116,6 +116,10 @@ local function CreateFloatingIcon()
     IconLabel.Size = UDim2.fromScale(0.8, 0.8)
     IconLabel.Position = UDim2.fromScale(0.5, 0.5)
     IconLabel.Parent = FloatingFrame
+
+    local IconCorner = Instance.new("UICorner")
+    IconCorner.CornerRadius = UDim.new(0, 26)
+    IconCorner.Parent = IconLabel
     
     FloatingIconGui.Parent = PlayerGui
     return FloatingIconGui, FloatingFrame
