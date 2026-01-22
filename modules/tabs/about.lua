@@ -86,16 +86,16 @@ local function CreateFloatingIcon()
     -- Ocean Teal Gradient
     local FrameGradient = Instance.new("UIGradient")
     FrameGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 220, 180)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 160, 140)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 100, 90))
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(75, 61, 50)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12, 10, 18)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(75, 61, 55))
     })
     FrameGradient.Rotation = 135
     FrameGradient.Parent = FloatingFrame
 
     -- Neon Glow Stroke
     local FrameStroke = Instance.new("UIStroke")
-    FrameStroke.Color = Color3.fromRGB(0, 230, 190)
+    FrameStroke.Color = Color3.fromRGB(75, 61, 55)
     FrameStroke.Thickness = 2.5
     FrameStroke.Transparency = 0.2
     FrameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
