@@ -103,7 +103,7 @@ local function CreateFloatingIcon()
 
     -- Rounded Corner
     local FrameCorner = Instance.new("UICorner")
-    FrameCorner.CornerRadius = UDim.new(0, 26)
+    FrameCorner.CornerRadius = UDim.new(1, 0)
     FrameCorner.Parent = FloatingFrame
 
     -- Floating Icon (Image)
@@ -118,7 +118,7 @@ local function CreateFloatingIcon()
     IconLabel.Parent = FloatingFrame
 
     local IconCorner = Instance.new("UICorner")
-    IconCorner.CornerRadius = UDim.new(0, 26)
+    IconCorner.CornerRadius = UDim.new(1, 0)
     IconCorner.Parent = IconLabel
     
     FloatingIconGui.Parent = PlayerGui
