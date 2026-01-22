@@ -159,8 +159,6 @@ do
                     local isUnlocked = IsLeverUnlocked(artifactName)
                     local statusIcon = isUnlocked and "UNLOCKED ✔" or "LOCKED 🔒"
                     statusStr = statusStr .. ArtifactData[artifactName].LeverName .. ": " .. statusIcon .. "\n"
-                    statusStr = statusStr:gsub("UNLOCKED.-\n", "UNLOCKED ✔\n")
-                    statusStr = statusStr:gsub("LOCKED.-\n", "LOCKED 🔒\n")
                     
                     if not isUnlocked and not artifactToProcess then
                         artifactToProcess = artifactName
