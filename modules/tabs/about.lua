@@ -111,8 +111,10 @@ local function CreateFloatingIcon()
     IconLabel.Name = "Icon"
     IconLabel.Image = "rbxassetid://89525545448838"
     IconLabel.BackgroundTransparency = 1
-    IconLabel.Size = UDim2.new(1, 0, 1, 0)
-    IconLabel.Position = UDim2.new(0, 0, 0, 0)
+    IconLabel.ScaleType = Enum.ScaleType.Fit
+    IconLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+    IconLabel.Size = UDim2.fromScale(0.8, 0.8)
+    IconLabel.Position = UDim2.fromScale(0.5, 0.5)
     IconLabel.Parent = FloatingFrame
     
     FloatingIconGui.Parent = PlayerGui
