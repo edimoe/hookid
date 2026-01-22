@@ -13,7 +13,7 @@ do
     about:Paragraph({
         Title = "HookID Community",
         Desc = "Join Our Community Discord Server to get the latest updates, support, and connect with other users!",
-        Image = "rbxassetid://128067315571345",
+        Image = "rbxassetid://89525545448838",
         ImageSize = 24,
         Buttons = {
             {
@@ -230,3 +230,4 @@ task.spawn(function()
     
 end)
 InitializeIcon()
+
