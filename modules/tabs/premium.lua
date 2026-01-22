@@ -157,7 +157,7 @@ do
                 -- Cek status semua lever
                 for _, artifactName in ipairs(ArtifactOrder) do
                     local isUnlocked = IsLeverUnlocked(artifactName)
-                    local statusIcon = isUnlocked and "UNLOCKED ✔" or "LOCKED 🔒"
+                    local statusIcon = isUnlocked and "UNLOCKED" or "LOCKED 🔒"
                     statusStr = statusStr .. ArtifactData[artifactName].LeverName .. ": " .. statusIcon .. "\n"
                     
                     if not isUnlocked and not artifactToProcess then
@@ -170,9 +170,9 @@ do
                 LEVER_STATUS_PARAGRAPH:SetDesc(statusStr)
 
                 if allUnlocked then
-                    LEVER_STATUS_PARAGRAPH:SetTitle("ALL LEVERS UNLOCKED ✔")
+                    LEVER_STATUS_PARAGRAPH:SetTitle("ALL LEVERS UNLOCKED")
                     WindUI:Notify({ Title = "Selesai", Content = "Semua Lever terbuka!", Duration = 5, Icon = "check" })
-                    LEVER_STATUS_PARAGRAPH:SetTitle("ALL LEVERS UNLOCKED ✔")
+                    LEVER_STATUS_PARAGRAPH:SetTitle("ALL LEVERS UNLOCKED")
                     break
                 elseif artifactToProcess then
                     local artData = ArtifactData[artifactToProcess]
